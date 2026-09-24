@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 340" width="1100" height="340" role="img" aria-label="GOLD agents ask the LiteLLM gateway for two roles. gold-general goes to a hosted tool-calling model in stages 1 and 2 and to an open model on your vLLM in stage 3. gold-sql goes to a hosted SQL model in stage 1, your fine-tuned model in stage 2, and your fine-tuned model on your vLLM in stage 3.">
+  <style>
+    text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1F22; }
+    .t { font-size: 17px; font-weight: 600; }
+    .s { font-size: 13px; fill: #5B6168; }
+    .c { font-size: 13px; }
+    .k { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; fill: #7A6030; }
+    .l { font-size: 12px; font-weight: 600; fill: #9A6B12; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .box { fill: #FFFFFF; stroke: #C9CEC9; stroke-width: 1.4; }
+    .chip { fill: #F3F4F2; stroke: #D8DBD8; stroke-width: 1.2; }
+    .own { fill: #F6EEDC; stroke: #9A6B12; stroke-width: 1.4; }
+    .line { fill: none; stroke: #6B7178; stroke-width: 1.6; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B7178"/></marker>
+  </defs>
+  <rect width="1100" height="340" rx="14" fill="#FFFFFF"/>
+
+  <!-- agents -->
+  <rect x="20" y="126" width="170" height="92" rx="12" class="box"/>
+  <text x="105" y="166" class="t" text-anchor="middle">GOLD agents</text>
+  <text x="105" y="188" class="s" text-anchor="middle">never name a model</text>
+
+  <path d="M190,150 H298" class="line" marker-end="url(#a)"/>
+  <path d="M190,194 H298" class="line" marker-end="url(#a)"/>
+  <text x="202" y="141" class="l">gold-general</text>
+  <text x="216" y="214" class="l">gold-sql</text>
+
+  <!-- gateway -->
+  <rect x="300" y="112" width="206" height="120" rx="12" fill="#9A6B12"/>
+  <text x="403" y="162" class="t" text-anchor="middle" style="fill:#FFFFFF">LiteLLM gateway</text>
+  <text x="403" y="184" class="s" text-anchor="middle" style="fill:#F6EEDC">routes each role</text>
+  <text x="403" y="202" class="s" text-anchor="middle" style="fill:#F6EEDC">to a model</text>
+
+  <path d="M506,150 C562,150 562,88 614,88" class="line" marker-end="url(#a)"/>
+  <path d="M506,194 C562,194 562,254 614,254" class="line" marker-end="url(#a)"/>
+
+  <!-- gold-general -->
+  <rect x="616" y="22" width="466" height="130" rx="12" class="box"/>
+  <text x="634" y="48" class="t" style="font-size:15px">gold-general <tspan class="s">· tool calling</tspan></text>
+  <rect x="634" y="62" width="136" height="72" rx="8" class="chip"/>
+  <text x="702" y="82" class="k" text-anchor="middle">STAGE 1</text>
+  <text x="702" y="104" class="c" text-anchor="middle">hosted API</text>
+  <rect x="790" y="62" width="136" height="72" rx="8" class="chip"/>
+  <text x="858" y="82" class="k" text-anchor="middle">STAGE 2</text>
+  <text x="858" y="104" class="c" text-anchor="middle">hosted API</text>
+  <rect x="946" y="62" width="120" height="72" rx="8" class="own"/>
+  <text x="1006" y="82" class="k" text-anchor="middle">STAGE 3</text>
+  <text x="1006" y="104" class="c" text-anchor="middle">open model</text>
+  <text x="1006" y="122" class="c" text-anchor="middle">on your vLLM</text>
+
+  <!-- gold-sql -->
+  <rect x="616" y="188" width="466" height="130" rx="12" class="box"/>
+  <text x="634" y="214" class="t" style="font-size:15px">gold-sql <tspan class="s">· writes SQL</tspan></text>
+  <rect x="634" y="228" width="136" height="72" rx="8" class="chip"/>
+  <text x="702" y="248" class="k" text-anchor="middle">STAGE 1</text>
+  <text x="702" y="270" class="c" text-anchor="middle">hosted API</text>
+  <rect x="790" y="228" width="136" height="72" rx="8" class="own"/>
+  <text x="858" y="248" class="k" text-anchor="middle">STAGE 2</text>
+  <text x="858" y="270" class="c" text-anchor="middle">your fine-tuned</text>
+  <text x="858" y="288" class="c" text-anchor="middle">model</text>
+  <rect x="946" y="228" width="120" height="72" rx="8" class="own"/>
+  <text x="1006" y="248" class="k" text-anchor="middle">STAGE 3</text>
+  <text x="1006" y="270" class="c" text-anchor="middle">fine-tuned</text>
+  <text x="1006" y="288" class="c" text-anchor="middle">on your vLLM</text>
+</svg>
