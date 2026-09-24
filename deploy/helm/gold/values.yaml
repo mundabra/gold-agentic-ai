@@ -37,6 +37,16 @@ tracing:
   otlpEndpoint: ""               # e.g. http://otel-collector.observability:4318
   content: false                 # true puts prompts, SQL and results into spans
 
+# NVIDIA NeMo Guardrails (optional): input rails on every question, output rails on
+# every answer if checkAnswers is true. The rails' self-checks use the same model
+# endpoint as GOLD (llm.baseUrl or the gateway). Config: files/guardrails/.
+guardrails:
+  enabled: false
+  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.2.0
+  model: gold-general              # the model the policy self-checks use
+  checkAnswers: true
+  failOpen: false                  # block questions if the rails server is unreachable
+
 # Audit trail: one JSON record per question on stdout (collect it with your log pipeline).
 # Optionally also appended to a file, e.g. on a mounted volume.
 audit:

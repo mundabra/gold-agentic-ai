@@ -10,7 +10,8 @@
       "mcp-glossary"      (list "definitions-agent")
       "postgres"          (list "mcp-data" "mcp-glossary")
       "scripted-model"    (list "orchestrator" "sql-agent" "definitions-agent")
-      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent") -}}
+      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent" "guardrails")
+      "guardrails"        (list "orchestrator") -}}
 {{- range $target, $from := $callers }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

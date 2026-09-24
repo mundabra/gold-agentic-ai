@@ -95,6 +95,7 @@ def stop(procs: list[subprocess.Popen]) -> None:
             p.wait(timeout=5)
         except subprocess.TimeoutExpired:
             p.kill()
+            p.wait()
 
 
 if __name__ == "__main__":

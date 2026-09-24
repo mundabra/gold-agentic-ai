@@ -145,6 +145,19 @@ async def chat(request: Request) -> dict:
     }
 
 
+@app.post("/v1/checks")
+async def checks(request: Request) -> dict:
+    """Stand-in for a NeMo Guardrails server's /v1/checks, for tests: blocks poems and emails."""
+    body = await request.json()
+    text = " ".join(_text(m.get("content")) for m in body.get("messages", []) if m.get("role") != "user"
+                    or "input" in body.get("guardrails", {}).get("rail_types", ["input"])).lower()
+    if "poem" in text:
+        return {"status": "blocked", "content": "", "rail": "self check input"}
+    if "@" in text:
+        return {"status": "blocked", "content": "", "rail": "regex check output"}
+    return {"status": "passed", "content": ""}
+
+
 @app.get("/v1/models")
 def models() -> dict:
     return {"object": "list", "data": [{"id": m, "object": "model"} for m in ("gold-general", "gold-sql")]}
