@@ -47,20 +47,19 @@ Without definitions, every miss was about business meaning, not SQL syntax: "las
 
 ## How it works
 
-**Three agents, two tool servers and a registry**, connected by open standards:
+**Three agents, two tool servers and a registry**, connected by open standards. Every model call goes through one gateway:
 
 ```mermaid
-flowchart TB
-    U([Business user]) -->|question| O["<b>Orchestrator</b><br/>chat UI and API · guardrail"]
-    O -. finds agents .-> R[("<b>Registry</b><br/>A2A Agent Cards")]
-    D & S -. register .-> R
+flowchart LR
+    U([Business user]) --> O["<b>Orchestrator</b><br/>chat UI · API · guardrail"]
     O -->|A2A| D["<b>Definitions agent</b>"]
     O -->|A2A| S["<b>SQL agent</b>"]
-    D -->|MCP| G["search_glossary"]
-    S -->|MCP| Q["describe_schema · run_sql"]
-    G & Q --> DB[("<b>Postgres</b><br/>read-only login")]
-    O & D & S -.->|gold-general| M{{"Any OpenAI-compatible endpoint<br/>hosted API · LiteLLM gateway · vLLM"}}
-    S -.->|gold-sql| M
+    O -. finds agents .- R[("Registry")]
+    D -->|MCP| T["<b>Tool servers</b><br/>glossary · schema · run_sql"]
+    S -->|MCP| T
+    T --> DB[("<b>Postgres</b><br/>read-only login")]
+    O & D & S ==> GW["<b>LiteLLM gateway</b><br/>one OpenAI-compatible endpoint"]
+    GW ==> MODELS(["Your models"])
 ```
 
 | Component | What it does |
@@ -70,7 +69,7 @@ flowchart TB
 | **SQL agent** | Writes one query with the dedicated SQL model, runs it read-only, returns the SQL and the result. |
 | **Tool servers** (MCP) | `search_glossary`, `describe_schema`, `run_sql`: parsing with SQLGlot, a dry-run cost check, a timeout and a row cap. |
 | **Registry** | Specialists register their A2A Agent Card; the orchestrator discovers them on every question. |
-| **Model endpoint** | Two roles: `gold-general` (tool calling) and `gold-sql` (writing SQL; the one you fine-tune). |
+| **LiteLLM gateway** | One OpenAI-compatible endpoint for every model call. Routes GOLD's two roles, `gold-general` and `gold-sql`, to whichever models you choose. Optional for a single model. |
 
 | Layer | Standard | Why it matters |
 |---|---|---|
@@ -78,6 +77,35 @@ flowchart TB
 | Agent to agent | [A2A](https://a2a-protocol.org) | Agents deploy, scale and fail independently, and new agents join without code changes. |
 | Agent to tools | [MCP](https://modelcontextprotocol.io) | Tools are small servers any MCP client can use. |
 | Agent logic | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) | Widely used and provider-agnostic. Its trace export to OpenAI is off by default. |
+
+### One endpoint, many models
+
+GOLD never names a real model. It only asks for two roles, `gold-general` (tool calling for the orchestrator and agents) and `gold-sql` (writing SQL). The [LiteLLM](https://docs.litellm.ai) gateway decides which model answers each role, so you can mix providers, run a small fine-tuned model next to a large general one, and move to your own GPUs one role at a time:
+
+```mermaid
+flowchart LR
+    A["GOLD agents"] -->|gold-general| GW{{"LiteLLM gateway<br/>routes each role to a model"}}
+    A -->|gold-sql| GW
+    GW -->|gold-general| G["Tool-calling model<br/>hosted API, later vLLM on your GPUs"]
+    GW -->|gold-sql| Q["SQL model<br/>hosted API, then your fine-tuned model"]
+```
+
+| GOLD asks for | Stage 1: API | Stage 2: fine-tune | Stage 3: own inference |
+|---|---|---|---|
+| `gold-general` | a hosted tool-calling model | a hosted tool-calling model | an open model on your vLLM |
+| `gold-sql` | a hosted SQL model | **your fine-tuned model** | your fine-tuned model on your vLLM |
+
+Each change is a few lines of gateway configuration ([`deploy/litellm/config.yaml`](deploy/litellm/config.yaml) or the Helm `gateway.models` values), with no code changes. For example, stage 2 points the SQL role at your own model:
+
+```yaml
+model_list:
+  - model_name: gold-sql                      # what GOLD asks for
+    litellm_params:
+      model: openai/gold-sql                  # served by your vLLM, with your LoRA adapter
+      api_base: http://gold-vllm-sql:8000/v1
+```
+
+For a first run you can skip the gateway and point GOLD straight at one OpenAI-compatible API ([stage 1](docs/stage-1-api.md)). Add it when you have more than one model to route.
 
 The [architecture page](docs/architecture.md) follows one question step by step and shows where each control sits.
 
