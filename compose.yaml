@@ -64,6 +64,8 @@ services:
       POSTGRES_USER: gold_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gold_admin}
       GOLD_READER_PASSWORD: ${GOLD_READER_PASSWORD:-gold_reader}
+      GOLD_FEEDBACK_PASSWORD: ${GOLD_FEEDBACK_PASSWORD:-gold_feedback}
+      GOLD_CURATOR_PASSWORD: ${GOLD_CURATOR_PASSWORD:-gold_curator}
     ports:
       - "127.0.0.1:${GOLD_DB_PORT:-5432}:5432"    # for gold eval / bench / dataset on your machine
     volumes:
@@ -113,6 +115,10 @@ services:
   orchestrator:
     <<: *gold
     command: ["serve", "orchestrator"]
+    environment:
+      <<: *gold-env
+      # Only the orchestrator gets the insert-only feedback login.
+      GOLD_FEEDBACK_DATABASE_URL: ${GOLD_COMPOSE_FEEDBACK_DATABASE_URL:-postgresql://gold_feedback:${GOLD_FEEDBACK_PASSWORD:-gold_feedback}@postgres:5432/gold}
     ports:
       - "127.0.0.1:${GOLD_PORT:-8080}:8000"
     depends_on:

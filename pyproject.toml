@@ -1,6 +1,6 @@
 [project]
 name = "gold-ai-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "GOLD (Governed Open Language-to-Data): a portable multi-agent reference architecture for asking business questions of your data."
 readme = "README.md"
 license = "Apache-2.0"

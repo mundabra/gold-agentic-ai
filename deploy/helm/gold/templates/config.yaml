@@ -79,4 +79,11 @@ stringData:
   url: "postgresql://gold_reader:{{ .Values.postgres.readerPassword }}@{{ $name }}-postgres:5432/gold"
   {{- end }}
   glossaryUrl: {{ .Values.database.glossaryUrl | quote }}
+  {{- if .Values.feedback.enabled }}
+  {{- if .Values.database.feedbackUrl }}
+  feedbackUrl: {{ .Values.database.feedbackUrl | quote }}
+  {{- else if .Values.postgres.enabled }}
+  feedbackUrl: "postgresql://gold_feedback:{{ .Values.postgres.feedbackPassword }}@{{ $name }}-postgres:5432/gold"
+  {{- end }}
+  {{- end }}
 {{- end }}

@@ -14,6 +14,7 @@ GOLD is a reference architecture: the controls below are built in and tested, an
 | Network | Optional NetworkPolicies (`networkPolicy.enabled`) allow only the connections GOLD needs. Compose publishes ports on 127.0.0.1 only. |
 | Safety rails | Optional NVIDIA NeMo Guardrails on every question and answer, failing closed ([guardrails](guardrails.md)). |
 | Identity | Proxy or OIDC sign-in, a signed user context across services, Postgres row-level security, per-user conversations, and the user in every audit record ([identity](identity.md)). |
+| Feedback | "Useful" / "Not right" with corrections go to a review queue through an insert-only login; analysts promote fixes to verified queries ([feedback](feedback.md)). |
 | Registry | Optional shared token (`GOLD_REGISTRY_TOKEN`) for registration. A live agent's name can't be taken over by another service. |
 | Memory | Conversation history in a SQLite file, or a shared database (`GOLD_SESSION_DB_URL`) for more than one orchestrator replica. |
 | Tracing | OpenTelemetry traces across every service, one trace per question; prompts and results kept out of spans by default ([observability](observability.md)). |

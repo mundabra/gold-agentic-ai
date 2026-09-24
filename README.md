@@ -36,6 +36,7 @@ GOLD makes the **meaning** of a question part of the system:
 2. **Governed execution.** A SQL agent writes one read-only query with a dedicated SQL model. The database itself enforces read-only access and hides personal-data columns.
 3. **Shown work.** Every answer carries the definition it used, the SQL it ran and a trace of the agents and tools behind it. When the result has a chartable shape, the UI draws a bar or line chart from the query's own rows, never from the model's text.
 4. **Measured, not assumed.** `gold eval` scores any model, or the whole running system, against questions with known-correct answers. Use it as a quality gate before any change ships.
+5. **Learns from its users.** "Not right" and a corrected query go to a review queue; once an analyst approves, the fix is a worked example for every later question ([feedback loop](docs/feedback.md)).
 
 **Measured on 20 business questions** over the sample database (24 September 2026; [every run and its caveats](evals/RESULTS.md)). "SQL step" scores the SQL model alone; "whole system" asks the running agents.
 
@@ -161,15 +162,22 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 
 ## Roadmap
 
-Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; the rest are in progress, in this order:
+**Phase 2 is complete** (v0.3.0): the controls enterprises ask about first.
 
-- [x] **Tracing and audit:** OpenTelemetry traces across every service, and a JSON audit record per question.
+- [x] **Tracing and audit:** OpenTelemetry traces across every service, and a JSON audit record per question ([observability](docs/observability.md)).
 - [x] **User identity and row-level security:** proxy or OIDC sign-in; the user's identity travels to the database, where row-level policies decide what they can see ([identity](docs/identity.md)).
-- [x] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI (`gold verify-queries`).
-- [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
+- [x] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as worked examples and checked in CI ([extending](docs/extending.md#add-verified-queries)).
+- [x] **Feedback loop:** "Useful" / "Not right" and corrected SQL go to a review queue; approved fixes become verified queries and fine-tuning data ([feedback](docs/feedback.md)).
 - [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).
 - [x] **NVIDIA Nemotron profile:** Nemotron 3 Super for the agents and Nemotron 3.5 Lightning for SQL, served with vLLM ([choosing models](docs/models.md)).
-- [x] **Charts:** a bar or line chart for each result that has a chartable shape, drawn from the query's own rows.
+- [x] **Charts:** a bar or line chart for each result with a chartable shape, drawn from the query's own rows.
+
+**Next (phase 3), in rough order:**
+- **A semantic model:** metrics, dimensions and joins defined once (a subset compatible with the Open Semantic Interchange), alongside the glossary.
+- **Cost per user:** pass the signed-in user to the gateway so spend is attributed per person and team.
+- **More databases:** the database layer (`gold/db.py`) is three functions; add engines beyond PostgreSQL.
+- **Published fine-tuning results:** stage 2 numbers for a small open model against the stage 1 baseline.
+- **Chat front-ends:** Slack and Microsoft Teams, using the same API and identity.
 
 ## Project layout
 

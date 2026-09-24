@@ -7,6 +7,7 @@
     gold dataset finetune/seed_pairs.jsonl          stage 2: build a fine-tuning dataset
     gold aiperf-payloads / aiperf-summary           stage 3: serving benchmarks with NVIDIA AIPerf (scripts/aiperf.sh)
     gold verify-queries                             check every approved example query (run it in CI)
+    gold feedback list | promote ID | dismiss ID | export   review what users flagged
 """
 
 import argparse
@@ -108,6 +109,19 @@ def _main() -> None:
     d.add_argument("--out", default="finetune/data")
     d.add_argument("--eval-questions", default="evals/questions.jsonl", help="held out: never used for training")
     d.add_argument("--no-definitions", action="store_true", help="train on bare questions only")
+    fb = sub.add_parser("feedback", help="review user feedback (needs GOLD_CURATOR_DATABASE_URL)")
+    fbs = fb.add_subparsers(dest="action", required=True)
+    fl = fbs.add_parser("list", help="show feedback waiting for review")
+    fl.add_argument("--status", default="new", choices=["new", "promoted", "dismissed"])
+    fp = fbs.add_parser("promote", help="turn a feedback item into a verified query")
+    fp.add_argument("id", type=int)
+    fp.add_argument("--verified-by", required=True, help="who vouches for the SQL")
+    fp.add_argument("--question", help="reword the question (default: the user's)")
+    fp.add_argument("--sql", help="the SQL to approve (default: the corrected SQL, or the SQL that ran for a 'Useful' rating)")
+    fd = fbs.add_parser("dismiss", help="close a feedback item without changes")
+    fd.add_argument("id", type=int)
+    fd.add_argument("--reviewed-by", required=True)
+    fbs.add_parser("export", help="print verified question/SQL pairs as JSONL (for gold dataset)")
     vq = sub.add_parser("verify-queries", help="check that every approved example query parses, runs and is not an evaluation question")
     vq.add_argument("--eval-questions", default="evals/questions.jsonl")
     ap = sub.add_parser("aiperf-payloads", help="write GOLD's real SQL requests as NVIDIA AIPerf raw payloads")
@@ -120,7 +134,7 @@ def _main() -> None:
     asum.add_argument("--slo-ms", type=float, default=3000, help="latency target the goodput column refers to")
     args = parser.parse_args()
 
-    if args.command in {"eval", "bench", "dataset", "aiperf-payloads", "verify-queries"}:
+    if args.command in {"eval", "bench", "dataset", "aiperf-payloads", "verify-queries", "feedback"}:
         # Engineer commands run on your machine: read .env, and reach the
         # Compose database on localhost unless told otherwise.
         load_env_file()
@@ -149,6 +163,29 @@ def _main() -> None:
                 print(f"FAILED quality gate: {arm} scored {score:.0%}, below {args.min_accuracy:.0%}", file=sys.stderr)
                 sys.exit(2)
             print(f"Passed quality gate: {arm} scored {score:.0%} (bar {args.min_accuracy:.0%})")
+    elif args.command == "feedback":
+        from gold import feedback
+
+        try:
+            if args.action == "list":
+                for item in feedback.list_items(args.status):
+                    print(f"#{item['id']}  {item['rating']:4}  {item['user'] or '-'}  {item['question']}")
+                    for label in ("sql_ran", "corrected_sql", "comment"):
+                        if item[label]:
+                            print(f"      {label}: {item[label]}")
+            elif args.action == "promote":
+                result = feedback.promote(args.id, args.verified_by, args.question, args.sql)
+                print(f"Promoted to a verified query: {result['question']}")
+                for p in result["problems"]:
+                    print(f"  check: {p['question']}: {p['reason']}")
+            elif args.action == "dismiss":
+                feedback.dismiss(args.id, args.reviewed_by)
+                print(f"Dismissed #{args.id}")
+            else:
+                for pair in feedback.export_pairs():
+                    print(json.dumps(pair, ensure_ascii=False))
+        except feedback.FeedbackError as exc:
+            sys.exit(str(exc))
     elif args.command == "verify-queries":
         from gold import semantic
 

@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/mundabra/gold-ai-agent   # published on each release; or build the Dockerfile yourself
-  tag: "0.2.0"
+  tag: "0.3.0"
   pullPolicy: IfNotPresent
 
 # --- Models. Every model call goes to one OpenAI-compatible endpoint.
@@ -60,7 +60,7 @@ tracing:
 # endpoint as GOLD (llm.baseUrl or the gateway). Config: files/guardrails/.
 guardrails:
   enabled: false
-  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.2.0
+  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.3.0
   model: gold-general              # the model the policy self-checks use
   checkAnswers: true
   failOpen: false                  # block questions if the rails server is unreachable
@@ -81,12 +81,19 @@ database:
   glossaryUrl: ""                # optional separate database for the glossary table
   existingSecret: ""             # or a Secret with keys: url (and optionally glossaryUrl)
   schemas: "public"              # schemas the SQL agent may see and query
+  feedbackUrl: ""                # insert-only login for the feedback queue (default: the bundled Postgres)
+
+# Feedback loop: "Useful" / "Not right" in the UI, reviewed with `gold feedback`.
+feedback:
+  enabled: true
 
 postgres:
   enabled: true
   image: postgres:17-alpine
   adminPassword: gold_admin
   readerPassword: gold_reader
+  feedbackPassword: gold_feedback
+  curatorPassword: gold_curator
   storage: 2Gi
 
 # --- GOLD components (same image, different command).
