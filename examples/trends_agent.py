@@ -24,6 +24,7 @@ def build_agent(servers):
         name="Trends agent",
         instructions=INSTRUCTIONS,
         model=llm.model(config.AGENT_MODEL),
+        model_settings=llm.settings(),
         mcp_servers=servers,
     )
 

@@ -21,6 +21,8 @@ flowchart LR
 
 GOLD only ever asks for two aliases, `gold-general` and `gold-sql`. The gateway maps them to real endpoints. That lets you move one role at a time: self-host the SQL model first, and keep a hosted API for the general model until you are ready.
 
+> **Ready-made option:** `deploy/helm/gold/profiles/nemotron.yaml` serves both roles with NVIDIA Nemotron models. See [choosing models](models.md).
+
 ## 1. Serve the SQL model with vLLM
 
 The Helm chart runs vLLM model servers on GPU nodes. First put the stage 2 adapter on a volume the server can mount:

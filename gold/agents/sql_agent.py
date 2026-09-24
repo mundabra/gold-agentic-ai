@@ -42,6 +42,7 @@ def build_agent(servers: list[MCPServerStreamableHttp]) -> Agent:
         name="SQL agent",
         instructions=INSTRUCTIONS,
         model=llm.model(config.AGENT_MODEL),
+        model_settings=llm.settings(),
         tools=[generate_sql],
         mcp_servers=servers,
     )

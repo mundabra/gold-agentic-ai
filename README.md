@@ -142,7 +142,7 @@ Known limits are listed honestly in [production.md](docs/production.md#known-lim
 - **Your database:** give GOLD a read-only login with column-level grants, and put your definitions in the glossary. ([guide](docs/extending.md#use-your-own-database))
 - **A new agent:** one file. It registers itself, and the orchestrator discovers it with no changes. `docker compose --profile scripted --profile example up` adds a Trends agent to watch it happen. ([guide](docs/extending.md#add-an-agent))
 - **A new tool:** add a function to an MCP server. ([guide](docs/extending.md#add-a-tool))
-- **A different model:** configuration only, then `gold eval`.
+- **A different model:** configuration only, then `gold eval`. [Choosing models](docs/models.md) covers the two roles, turning reasoning off for SQL, and a ready-made NVIDIA Nemotron profile.
 
 ## Deploy on Kubernetes
 
@@ -156,7 +156,7 @@ helm install gold deploy/helm/gold \
 kubectl port-forward svc/gold-orchestrator 8080:80
 ```
 
-The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU nodes (`vllm.enabled`) and NetworkPolicies (`networkPolicy.enabled`). Before production, read the [production checklist](docs/production.md).
+The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU nodes (`vllm.enabled`), NVIDIA NeMo Guardrails (`guardrails.enabled`) and NetworkPolicies (`networkPolicy.enabled`). For open models on your GPUs, start from the NVIDIA Nemotron profile: `-f deploy/helm/gold/profiles/nemotron.yaml`. Before production, read the [production checklist](docs/production.md).
 
 ## Roadmap
 
@@ -167,7 +167,7 @@ Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; t
 - [ ] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI.
 - [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
 - [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).
-- [ ] **NVIDIA Nemotron profiles:** ready-made Helm values for serving Nemotron models with vLLM, one for each GOLD role.
+- [x] **NVIDIA Nemotron profile:** Nemotron 3 Super for the agents and Nemotron 3.5 Lightning for SQL, served with vLLM ([choosing models](docs/models.md)).
 - [ ] **Charts:** a suggested chart for each result, chosen from its shape.
 
 ## Project layout

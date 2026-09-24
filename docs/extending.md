@@ -80,6 +80,8 @@ Then run `gold eval` and `gold bench` to confirm the change did not make answers
 | `GOLD_SQL_INCLUDE_SCHEMA` | `true` | Append the schema to the SQL prompt |
 | `GOLD_SQL_PASS_DEFINITIONS` | `true` | Append business definitions to the question |
 | `GOLD_SQL_MAX_TOKENS` | `2048` | Output budget (reasoning models need room) |
+| `GOLD_SQL_EXTRA_BODY` | empty | JSON added to every SQL-model request, e.g. `{"chat_template_kwargs": {"enable_thinking": false}}` to turn reasoning off |
+| `GOLD_AGENT_EXTRA_BODY` | empty | JSON added to every orchestrator and agent model request |
 | `GOLD_DATABASE_URL` | `postgresql://gold_reader:…@postgres:5432/gold` | Read-only database login (the CLI defaults to `localhost:5432`) |
 | `GOLD_GLOSSARY_DATABASE_URL` | same as above | Separate database for the glossary |
 | `GOLD_DB_SCHEMAS` | `public` | Schemas the SQL agent may see |

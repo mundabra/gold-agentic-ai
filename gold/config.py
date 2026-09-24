@@ -1,5 +1,6 @@
 """Settings, read from environment variables so the same image runs anywhere."""
 
+import json
 import os
 
 
@@ -33,6 +34,12 @@ SQL_INCLUDE_SCHEMA = env_bool("GOLD_SQL_INCLUDE_SCHEMA", True)
 SQL_PASS_DEFINITIONS = env_bool("GOLD_SQL_PASS_DEFINITIONS", True)
 # Reasoning models spend tokens thinking before they answer; leave them room.
 SQL_MAX_TOKENS = int(env("GOLD_SQL_MAX_TOKENS", "2048"))
+
+# Extra fields sent with every model request, as JSON: model-specific switches such as
+# turning reasoning off ({"chat_template_kwargs": {"enable_thinking": false}} for
+# NVIDIA Nemotron on vLLM). One for the SQL model, one for the orchestrator and agents.
+SQL_EXTRA_BODY = json.loads(env("GOLD_SQL_EXTRA_BODY", "") or "{}")
+AGENT_EXTRA_BODY = json.loads(env("GOLD_AGENT_EXTRA_BODY", "") or "{}")
 
 DATABASE_URL = env("GOLD_DATABASE_URL", "postgresql://gold_reader:gold_reader@postgres:5432/gold")
 # The glossary can live in its own small database, so your business data can
