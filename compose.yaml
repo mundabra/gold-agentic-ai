@@ -8,6 +8,7 @@
 #   scripted  a stand-in model with canned answers: see the whole flow with no API key
 #   gateway   LiteLLM Proxy: one endpoint in front of several models (stages 2 and 3)
 #   example   a third agent (examples/trends_agent.py) that joins without any orchestrator change
+#   tracing   Jaeger at http://localhost:16686; set OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 in .env
 
 x-gold: &gold
   build: .
@@ -28,6 +29,9 @@ x-gold: &gold
     GOLD_PII_COLUMNS: ${GOLD_PII_COLUMNS:-email,phone,fax,address}
     GOLD_OPENAI_TRACING: ${GOLD_OPENAI_TRACING:-false}
     GOLD_REGISTRY_TOKEN: ${GOLD_REGISTRY_TOKEN:-}
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    GOLD_TRACE_CONTENT: ${GOLD_TRACE_CONTENT:-false}
+    GOLD_AUDIT_LOG: ${GOLD_AUDIT_LOG:-}
     # Inside the Compose network; the CLI on your machine uses localhost:5432 instead.
     GOLD_DATABASE_URL: ${GOLD_COMPOSE_DATABASE_URL:-postgresql://gold_reader:${GOLD_READER_PASSWORD:-gold_reader}@postgres:5432/gold}
     GOLD_GLOSSARY_DATABASE_URL: ${GOLD_GLOSSARY_DATABASE_URL:-}
@@ -115,6 +119,13 @@ services:
     depends_on:
       registry: { condition: service_healthy }
       mcp-data: { condition: service_healthy }
+
+  jaeger:
+    image: jaegertracing/jaeger:2.10.0
+    profiles: ["tracing"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:16686:16686"   # trace UI
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable

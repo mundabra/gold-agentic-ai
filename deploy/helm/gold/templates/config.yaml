@@ -18,6 +18,9 @@ data:
   GOLD_PII_COLUMNS: {{ .Values.governance.piiColumns | quote }}
   GOLD_OPENAI_TRACING: {{ .Values.governance.openaiTracing | quote }}
   GOLD_DB_SCHEMAS: {{ .Values.database.schemas | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.tracing.otlpEndpoint | quote }}
+  GOLD_TRACE_CONTENT: {{ .Values.tracing.content | quote }}
+  GOLD_AUDIT_LOG: {{ .Values.audit.logFile | quote }}
   GOLD_REGISTRY_URL: "http://{{ $name }}-registry:8000"
   GOLD_DATA_MCP_URL: "http://{{ $name }}-mcp-data:8000/mcp"
   GOLD_GLOSSARY_MCP_URL: "http://{{ $name }}-mcp-glossary:8000/mcp"

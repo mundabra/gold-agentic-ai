@@ -8,7 +8,7 @@ COPY pyproject.toml README.md LICENSE ./
 COPY gold ./gold
 COPY evals ./evals
 COPY examples ./examples
-RUN pip install . && useradd --system --uid 10001 gold
+RUN pip install ".[otel,sessions]" && useradd --system --uid 10001 gold
 
 USER 10001
 EXPOSE 8000

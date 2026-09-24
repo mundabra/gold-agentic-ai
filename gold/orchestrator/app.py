@@ -19,7 +19,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from gold import config, llm, runlog, sessions
+from gold import audit, config, llm, runlog, sessions, telemetry
 from gold.orchestrator.a2a_tools import discover, make_tool
 
 log = logging.getLogger("gold.orchestrator")
@@ -118,6 +118,8 @@ async def ask(q: Question) -> dict:
     try:
         result = await Runner.run(agent, question, context=context, session=session, max_turns=10)
     except InputGuardrailTripwireTriggered:
+        elapsed = round((time.perf_counter() - started) * 1000)
+        audit.record(session_id=session_id, question=question, blocked=True, calls=[], usage={}, elapsed_ms=elapsed)
         return {
             "answer": REFUSAL,
             "blocked": True,
@@ -125,10 +127,12 @@ async def ask(q: Question) -> dict:
             "agents": [a["name"] for a in registered],
             "calls": [],
             "usage": {},
-            "elapsed_ms": round((time.perf_counter() - started) * 1000),
+            "elapsed_ms": elapsed,
         }
     except Exception as exc:  # model errors, max turns: report them as JSON the UI can show
         log.exception("run failed")
+        audit.record(session_id=session_id, question=question, blocked=False, calls=context["calls"], usage={},
+                     elapsed_ms=round((time.perf_counter() - started) * 1000), error=str(exc))
         raise HTTPException(status_code=502, detail=f"The answer could not be completed: {exc}") from exc
 
     calls = context["calls"]
@@ -136,7 +140,8 @@ async def ask(q: Question) -> dict:
     for call in calls:
         for key in ("model_requests", "input_tokens", "output_tokens", "total_tokens"):
             total[key] += int(call.get("usage", {}).get(key, 0))
-    log.info("answered in %d ms with %d agent calls", (time.perf_counter() - started) * 1000, len(calls))
+    elapsed = round((time.perf_counter() - started) * 1000)
+    audit.record(session_id=session_id, question=question, blocked=False, calls=calls, usage=total, elapsed_ms=elapsed)
     return {
         "answer": str(result.final_output),
         "blocked": False,
@@ -144,13 +149,13 @@ async def ask(q: Question) -> dict:
         "agents": [a["name"] for a in registered],
         "calls": calls,
         "usage": total,
-        "elapsed_ms": round((time.perf_counter() - started) * 1000),
+        "elapsed_ms": elapsed,
     }
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    uvicorn.run(app, host=config.HOST, port=config.PORT)
+    uvicorn.run(telemetry.wrap(app, "orchestrator"), host=config.HOST, port=config.PORT)
 
 
 if __name__ == "__main__":

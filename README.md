@@ -130,7 +130,8 @@ SQL_MODEL=openai/gold-sql               # "openai/" = any OpenAI-compatible serv
 | Personal data | The database login cannot read email, phone, fax, street address, postal code or birth date. Queries that try fail, and the schema the model sees leaves them out. Emails and phone numbers are also scrubbed from any text GOLD returns, including error messages. |
 | Runaway queries | A dry run asks the database planner for the cost estimate first and refuses anything above `GOLD_MAX_QUERY_COST`. Every query has a 10-second timeout and a row cap. |
 | One meaning per term | Definitions live in a glossary table with an owner per term. Agents quote them word for word. |
-| Auditable answers | Each response carries the definitions, the SQL that actually ran, the agents and tools called, tokens and time. |
+| Auditable answers | Each response carries the definitions, the SQL that actually ran, the agents and tools called, tokens and time. Every question, answered or blocked, also leaves a JSON audit record. |
+| Traced end to end | Set one OpenTelemetry endpoint and each question becomes a single trace across the orchestrator, agents, tool servers, database and model calls, with prompts and results kept out of spans by default ([observability](docs/observability.md)). |
 | Your data stays yours | No component sends data anywhere except the model endpoint you configure. The Agents SDK's trace export is off. In stage 1 the schema, question and results go to your hosted model provider. |
 
 Known limits are listed honestly in [production.md](docs/production.md#known-limits), for example that names are readable by design and the guardrail is a keyword filter backed by the database rules.
@@ -158,10 +159,15 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 
 ## Roadmap
 
-- **Approved-examples memory:** retrieve similar question-and-SQL pairs that analysts have approved, so GOLD learns from corrections (Postgres full-text search first, then pgvector).
-- **Pluggable safety rails:** optional content-safety guardrails (for example NVIDIA NeMo Guardrails, or a safety model called through an Agents SDK guardrail).
-- **More databases:** the database layer (`gold/db.py`) is three functions; add engines beyond PostgreSQL.
-- **Published fine-tuning results:** stage 2 numbers for a small open model against the stage 1 baseline.
+Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; the rest are in progress, in this order:
+
+- [x] **Tracing and audit:** OpenTelemetry traces across every service, and a JSON audit record per question.
+- [ ] **User identity and row-level security:** sign-in at the orchestrator; the user's identity travels to the database, where row-level policies decide what they can see.
+- [ ] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI.
+- [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
+- [ ] **NVIDIA NeMo Guardrails (optional):** jailbreak, topic, PII and SQL-injection rails around the model calls.
+- [ ] **NVIDIA Nemotron profiles:** ready-made Helm values for serving Nemotron models with vLLM, one for each GOLD role.
+- [ ] **Charts:** a suggested chart for each result, chosen from its shape.
 
 ## Project layout
 

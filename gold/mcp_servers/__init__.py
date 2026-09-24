@@ -6,7 +6,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from gold import config
+from gold import config, telemetry
 
 
 def serve(server: MCPServer) -> None:
@@ -23,4 +23,4 @@ def serve(server: MCPServer) -> None:
         # Put authentication in front of this in production.
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
-    uvicorn.run(app, host=config.HOST, port=config.PORT)
+    uvicorn.run(telemetry.wrap(app, server.name.removeprefix("gold-")), host=config.HOST, port=config.PORT)
