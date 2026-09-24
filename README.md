@@ -3,9 +3,11 @@
 [![ci](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-**Governed Open Language-to-Data.** Ask in plain language. Get the governed number.
+**Governed Open Language-to-Data.** Ask in plain language. Get the number your company's own definitions agree on.
 
-GOLD is an open-source reference architecture for **"talk to your data" assistants that enterprises can trust**. Business users ask questions in plain English. GOLD answers with the number, the business definition it used and the SQL it ran, so every answer can be checked. It runs on any Kubernetes cluster with any OpenAI-compatible model: a hosted API, your own fine-tuned model, or open models on your own GPUs.
+GOLD is an open-source reference architecture for "talk to your data" assistants. Business users ask a question in plain English. GOLD answers with the number, the business definition it used and the SQL it ran, so anyone can check it.
+
+It runs on any Kubernetes cluster, with any OpenAI-compatible model: a hosted API, your own fine-tuned model, or open models on your own GPUs.
 
 **For** platform and data teams who need to put natural-language analytics in front of business users without losing control of accuracy, access or cost. **It is** a working, tested blueprint you can run in two minutes and adapt; it is not a hosted product.
 
@@ -20,7 +22,7 @@ GOLD is an open-source reference architecture for **"talk to your data" assistan
 | Finance | "What was revenue by region last quarter?" · "What is our average order value by country?" |
 | Sales operations | "How much revenue did each sales rep bring in?" · "How many active customers do we have?" |
 | Product and marketing | "Which product line earned the most last year?" · "How did units sold change month over month?" |
-| Leadership | Any of the above, without waiting in the analytics team's queue, and with the definition shown |
+| Leadership | Any of the above, answered directly, with the definition shown |
 
 The same architecture fits any domain where people ask questions of a SQL database and the answer has to match the company's official numbers.
 
@@ -35,30 +37,32 @@ GOLD makes the **meaning** of a question part of the system:
 3. **Shown work.** Every answer carries the definition it used, the SQL it ran and a trace of the agents and tools behind it.
 4. **Measured, not assumed.** `gold eval` scores any model, or the whole running system, against questions with known-correct answers. Use it as a quality gate before any change ships.
 
-**Measured on 20 business questions** (September 2026, the sample database; [full results and caveats](evals/RESULTS.md)):
+**Measured on 20 business questions** over the sample database (24 September 2026; [every run and its caveats](evals/RESULTS.md)). "SQL step" scores the SQL model alone; "whole system" asks the running agents.
 
 | What was tested | Question + schema only | + agreed definitions |
 |---|---|---|
-| SQL step with `deepseek-v4-flash` | 65–80% | 90–100% |
-| SQL step with `gpt-oss-120b` | 90% | 95–100% |
-| The whole system end to end (both models together) | — | 90% |
+| SQL step, `deepseek-v4-flash` | 65–80% | 90–100% |
+| SQL step, `gpt-oss-120b` | 90% | 95–100% |
+| Whole system, end to end | — | 80–90% |
 
-Without definitions, every miss was about business meaning, not SQL syntax: "last year" read as today's date minus one year, or "active customers" counting everyone. The set is small and the glossary was written alongside it, so treat these as a demonstration of the method. Run `gold eval` on your own questions.
+Without definitions, every miss was about business meaning, not SQL syntax: "last year" read as today's date minus one year, or "active customers" counting everyone.
+
+Read these numbers with care: ranges span the last two runs, the set is small, and the glossary was written with the questions and adjusted after a failed run. The two whole-system misses were agent calls that did not finish under concurrent load. Treat this as a demonstration of the method, not a benchmark, and run `gold eval` on your own questions.
 
 ## How it works
 
-**Three agents, two tool servers and a registry**, connected by open standards. Every model call goes through one gateway:
+**Three agents, two tool servers and a registry**, connected by open standards: [A2A](https://a2a-protocol.org) for agent-to-agent calls and [MCP](https://modelcontextprotocol.io) (Model Context Protocol) for tools. Every model call goes to one OpenAI-compatible endpoint: a hosted API directly, or the LiteLLM gateway when you route several models.
 
-![GOLD architecture: the orchestrator finds agents in a registry and calls the Definitions agent and SQL agent over A2A; they use MCP tool servers on Postgres through a read-only login; every model call goes through the LiteLLM gateway](docs/images/architecture.svg)
+![GOLD architecture: the orchestrator finds agents in a registry and calls the Definitions agent and SQL agent over A2A; they use MCP tool servers on Postgres through a read-only login; every model call goes to one OpenAI-compatible endpoint](docs/images/architecture.svg)
 
 | Component | What it does |
 |---|---|
 | **Orchestrator** | Serves the chat UI and API, blocks requests to change data, calls the specialists, writes the answer. Keeps conversation memory. |
 | **Definitions agent** | Resolves business terms ("revenue", "last year", "active customer") from the glossary. |
-| **SQL agent** | Writes one query with the dedicated SQL model, runs it read-only, returns the SQL and the result. |
-| **Tool servers** (MCP) | `search_glossary`, `describe_schema`, `run_sql`: parsing with SQLGlot, a dry-run cost check, a timeout and a row cap. |
+| **SQL agent** | Writes one query with the SQL model (`gold-sql`), runs it read-only, returns the SQL and the result. |
+| **Tool servers** (MCP) | Glossary tools (`search_glossary`) and data tools (`describe_schema`, `run_sql`). Every query is parsed with SQLGlot, cost-checked with a dry run, and limited by a timeout and a row cap. |
 | **Registry** | Specialists register their A2A Agent Card; the orchestrator discovers them on every question. |
-| **LiteLLM gateway** | One OpenAI-compatible endpoint for every model call. Routes GOLD's two roles, `gold-general` and `gold-sql`, to whichever models you choose. Optional for a single model. |
+| **LiteLLM gateway** (optional) | Routes GOLD's two model roles, `gold-general` and `gold-sql`, to whichever models you choose. Skip it while you use a single hosted API. |
 
 | Layer | Standard | Why it matters |
 |---|---|---|
@@ -66,31 +70,6 @@ Without definitions, every miss was about business meaning, not SQL syntax: "las
 | Agent to agent | [A2A](https://a2a-protocol.org) | Agents deploy, scale and fail independently, and new agents join without code changes. |
 | Agent to tools | [MCP](https://modelcontextprotocol.io) | Tools are small servers any MCP client can use. |
 | Agent logic | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) | Widely used and provider-agnostic. Its trace export to OpenAI is off by default. |
-
-### One endpoint, many models
-
-GOLD never names a real model. It only asks for two roles, `gold-general` (tool calling for the orchestrator and agents) and `gold-sql` (writing SQL). The [LiteLLM](https://docs.litellm.ai) gateway decides which model answers each role, so you can mix providers, run a small fine-tuned model next to a large general one, and move to your own GPUs one role at a time:
-
-![GOLD asks the LiteLLM gateway for two roles; each role maps to a hosted model in stage 1 and to your own models by stage 3](docs/images/model-gateway.svg)
-
-<sub>Highlighted boxes are models you own. Each role moves on its own schedule.</sub>
-
-| GOLD asks for | Stage 1: API | Stage 2: fine-tune | Stage 3: own inference |
-|---|---|---|---|
-| `gold-general` | a hosted tool-calling model | a hosted tool-calling model | an open model on your vLLM |
-| `gold-sql` | a hosted SQL model | **your fine-tuned model** | your fine-tuned model on your vLLM |
-
-Each change is a few lines of gateway configuration ([`deploy/litellm/config.yaml`](deploy/litellm/config.yaml) or the Helm `gateway.models` values), with no code changes. For example, stage 2 points the SQL role at your own model:
-
-```yaml
-model_list:
-  - model_name: gold-sql                      # what GOLD asks for
-    litellm_params:
-      model: openai/gold-sql                  # served by your vLLM, with your LoRA adapter
-      api_base: http://gold-vllm-sql:8000/v1
-```
-
-For a first run you can skip the gateway and point GOLD straight at one OpenAI-compatible API ([stage 1](docs/stage-1-api.md)). Add it when you have more than one model to route.
 
 The [architecture page](docs/architecture.md) follows one question step by step and shows where each control sits.
 
@@ -113,15 +92,34 @@ Enterprises rarely start with GPUs. They start with an API, find out where it fa
 | | Stage | What you do | Why enterprises do it | Done when |
 |---|---|---|---|---|
 | 1 | [**Start with an API**](docs/stage-1-api.md) | Point GOLD at a hosted OpenAI-compatible model. | Value in an afternoon, with no infrastructure. | `gold eval` gives a baseline you trust. |
-| 2 | [**Specialise with fine-tuning**](docs/stage-2-fine-tune.md) | Build a dataset from approved queries (`gold dataset`) and fine-tune a small open model as `gold-sql`. | Test whether a model you own matches the hosted one on *your* schema, at lower cost per question. | The fine-tuned model passes the same quality gate. |
+| 2 | [**Specialise with fine-tuning**](docs/stage-2-fine-tune.md) | Build a dataset from approved queries (`gold dataset`) and fine-tune a small open model with LoRA (a small add-on trained on top of a base model) to serve as `gold-sql`. | Test whether a model you own matches the hosted one on *your* schema, at lower cost per question. | The fine-tuned model passes the same quality gate. |
 | 3 | [**Own the inference**](docs/stage-3-own-inference.md) | Serve the models with vLLM on your GPUs, behind a LiteLLM gateway. | Data never leaves your environment, cost is predictable at volume, you control latency. | `gold eval` and `gold bench` match your targets. |
 
 The evaluation runs through every stage ([how it works](docs/evaluation.md)):
 
 ```bash
-gold eval --model gold-sql --min-accuracy 0.9      # quality gate on the SQL step (fails CI below the bar)
-gold eval --system http://localhost:8080           # the whole running system, end to end
-gold bench --model gold-sql --concurrency 1,4,8    # latency, throughput, cost per 1,000 SQL generations
+pip install -e .                                          # the gold CLI, on your machine
+gold eval --model "$GOLD_SQL_MODEL" --min-accuracy 0.95   # quality gate on the SQL step (fails CI below the bar)
+gold eval --system http://localhost:8080                  # the whole running system, end to end
+gold bench --model "$GOLD_SQL_MODEL"                      # latency, throughput, cost per 1,000 SQL generations
+scripts/aiperf.sh                                         # serving metrics with NVIDIA AIPerf
+```
+
+AIPerf reports time to first token, per-token latency and goodput (the share of requests under your latency target). In a [measured run](evals/PERFORMANCE.md) on a hosted reasoning model, about three quarters of the generated tokens were reasoning rather than SQL. That is the main reason to try a fine-tuned SQL model in stage 2.
+
+### One endpoint, many models
+
+GOLD never names a real model. It only asks for two roles, `gold-general` (tool calling for the orchestrator and agents) and `gold-sql` (writing SQL). The [LiteLLM](https://docs.litellm.ai) gateway decides which model answers each role. You can mix providers, run a small fine-tuned model next to a large general one, and move to your own GPUs one role at a time:
+
+![GOLD asks the LiteLLM gateway for two roles; each role maps to a hosted model in stage 1 and to your own models by stage 3](docs/images/model-gateway.svg)
+
+<sub>Highlighted boxes are models you own. Each role moves on its own schedule.</sub>
+
+Each move is a configuration change, never a code change. For example, stage 2 points the SQL role at your own fine-tuned model with two lines in `.env` (read by [`deploy/litellm/config.yaml`](deploy/litellm/config.yaml); on Kubernetes, edit `gateway.models` in the Helm values):
+
+```bash
+SQL_API_BASE=http://your-vllm:8000/v1   # the server hosting your fine-tuned model
+SQL_MODEL=openai/gold-sql               # "openai/" = any OpenAI-compatible server
 ```
 
 ## Governance built in
@@ -162,7 +160,7 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 
 - **Approved-examples memory:** retrieve similar question-and-SQL pairs that analysts have approved, so GOLD learns from corrections (Postgres full-text search first, then pgvector).
 - **Pluggable safety rails:** optional content-safety guardrails (for example NVIDIA NeMo Guardrails, or a safety model called through an Agents SDK guardrail).
-- **More databases:** the data tools are three functions; add engines beyond PostgreSQL.
+- **More databases:** the database layer (`gold/db.py`) is three functions; add engines beyond PostgreSQL.
 - **Published fine-tuning results:** stage 2 numbers for a small open model against the stage 1 baseline.
 
 ## Project layout

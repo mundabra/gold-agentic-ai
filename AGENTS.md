@@ -4,7 +4,7 @@ Instructions for AI coding agents (and people) working on GOLD. Read this before
 
 ## What GOLD is
 
-GOLD (Governed Open Language-to-Data) is a vendor-neutral reference architecture for "talk to your data" assistants. An orchestrator built on the OpenAI Agents SDK finds specialist agents in a registry and calls them over A2A. The Definitions agent resolves business terms from a governed glossary. The SQL agent writes one read-only query with a dedicated SQL model. Both use MCP tool servers backed by Postgres through a read-only, column-granted login. Every model call goes to one OpenAI-compatible endpoint, usually a LiteLLM gateway. See `docs/architecture.md`.
+GOLD (Governed Open Language-to-Data) is a vendor-neutral reference architecture for "talk to your data" assistants. An orchestrator built on the OpenAI Agents SDK finds specialist agents in a registry and calls them over A2A. The Definitions agent resolves business terms from a governed glossary. The SQL agent writes one read-only query with a dedicated SQL model. Both use MCP tool servers backed by Postgres through a read-only, column-granted login. Every model call goes to one OpenAI-compatible endpoint: a hosted API directly, or a LiteLLM gateway that routes several models. See `docs/architecture.md`.
 
 ## Setup and checks
 
@@ -33,7 +33,8 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `gold/guards.py` | SQLGlot read-only check, risky-function denylist, text scrubbing |
 | `gold/db.py` | Query execution (dry-run cost, single statement, timeout, row cap), schema listing, glossary search |
 | `gold/sql_model.py` | **The SQL prompt contract**, shared by the SQL agent, `gold eval` and `gold dataset` |
-| `gold/evaluate.py`, `bench.py`, `dataset.py`, `cli.py` | `gold eval`, `gold bench`, `gold dataset`, the CLI |
+| `gold/evaluate.py`, `bench.py`, `dataset.py`, `aiperf.py`, `cli.py` | `gold eval`, `gold bench`, `gold dataset`, AIPerf payloads and summaries, the CLI |
+| `scripts/aiperf.sh` | Serving benchmark with NVIDIA AIPerf, using the production SQL requests |
 | `gold/config.py` | Every setting, read from `GOLD_*` environment variables |
 | `deploy/postgres/` | Sample data, glossary, and the read-only role with column grants |
 | `deploy/helm/gold/`, `compose.yaml`, `deploy/litellm/` | Deployment |
@@ -46,7 +47,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 3. **No secrets in the repo.** No API keys, tokens or passwords other than the documented local defaults (`gold_reader`, `gold_admin`, `sk-gold-local`).
 4. **The SQL prompt contract is load-bearing.** Changing `gold/sql_model.py` changes what a fine-tuned model sees. Say so in the pull request and re-run `gold eval`.
 5. **The evaluation set is held out.** Never add `evals/questions.jsonl` questions to training data, and never edit reference SQL to make a model pass.
-6. **Report only measured numbers.** Anything in `evals/RESULTS.md` or the README must come from a real `gold eval` or `gold bench` run, with its caveats.
+6. **Report only measured numbers.** Anything in `evals/RESULTS.md`, `evals/PERFORMANCE.md` or the README must come from a real `gold eval`, `gold bench` or `scripts/aiperf.sh` run, with its caveats.
 7. **Keep the two copies of the database scripts identical:** `deploy/postgres/` and `deploy/helm/gold/files/postgres/`.
 8. **Settings are environment variables.** Add new ones to `gold/config.py`, `compose.yaml`, the Helm chart (`values.yaml` and `templates/config.yaml`) and the settings table in `docs/extending.md`, all in the same change.
 

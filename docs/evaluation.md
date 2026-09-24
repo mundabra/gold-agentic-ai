@@ -64,4 +64,6 @@ gold bench --model gold-sql --concurrency 1,4,8 --requests 16 --price-in 0.20 --
 
 It sends real GOLD prompts (question + schema) to the SQL model at each concurrency level and reports p50 and p95 latency, requests per second, output tokens per second, errors, and **cost per 1,000 SQL generations**. A full answer takes about 8 to 12 model calls across the orchestrator and agents, so multiply accordingly, or read the token totals from `gold eval --system`.
 
-For a deep serving benchmark (time to first token, inter-token latency, saturation curves), use a dedicated tool such as [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) against the same endpoint.
+## `scripts/aiperf.sh`: serving metrics
+
+For time to first token, per-token latency, throughput at load and goodput against a latency target, `scripts/aiperf.sh` runs [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) with GOLD's real SQL requests. See [stage 3](stage-3-own-inference.md#4-benchmark-serving-with-aiperf) for the metrics, and [evals/PERFORMANCE.md](../evals/PERFORMANCE.md) for a measured run.

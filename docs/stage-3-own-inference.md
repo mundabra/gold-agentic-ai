@@ -104,7 +104,28 @@ gold eval --system http://localhost:8080                 # the whole system, end
 gold bench --model gold-sql --concurrency 1,8,32         # latency and throughput on your GPUs
 ```
 
-`gold bench` answers "is it fast enough for GOLD's traffic?". For a full serving benchmark (time to first token, inter-token latency, throughput at saturation), run a dedicated tool such as [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) against the same endpoint.
+## 4. Benchmark serving with AIPerf
+
+`gold bench` answers "is it fast enough for GOLD's traffic?". To size GPUs and set latency targets, run [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) with GOLD's real requests:
+
+```bash
+pipx install aiperf
+export GOLD_LLM_BASE_URL=http://localhost:4000/v1 GOLD_LLM_API_KEY=<llm.apiKey> GOLD_SQL_MODEL=gold-sql
+CONCURRENCY=1,8,32 REQUESTS=200 SLO_MS=2000 scripts/aiperf.sh
+```
+
+The script writes the production SQL requests as AIPerf payloads (`gold aiperf-payloads`), sweeps the concurrency levels, and prints one row per level (`gold aiperf-summary`):
+
+| Metric | What it tells you |
+|---|---|
+| Under target (goodput: share of requests within `SLO_MS`) | The number to agree with the business. |
+| First token (time to first token, TTFT) | How long before anything streams back: queueing plus prompt processing. Prefix caching helps, because GOLD's system prompt and schema repeat on every call. |
+| First SQL token | For reasoning models, when the answer itself starts, after the thinking. |
+| Per token (inter-token latency, ITL) | Time between streamed tokens. Rises as concurrency rises and GPUs are shared. |
+| Output tok/s | Total throughput: what one GPU setup can serve. |
+| Reasoning share | Tokens spent thinking rather than answering. A fine-tuned model that does not reason brings this near zero. |
+
+A measured baseline on a hosted API is in [evals/PERFORMANCE.md](../evals/PERFORMANCE.md).
 
 ## Tuning notes
 

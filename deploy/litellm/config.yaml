@@ -13,11 +13,11 @@ model_list:
       api_base: os.environ/GENERAL_API_BASE
       api_key: os.environ/GENERAL_API_KEY
 
-  # SQL writer: a hosted model in stage 1, your fine-tuned model in stage 2,
+  # SQL model: a hosted model in stage 1, your fine-tuned model in stage 2,
   # served on your own GPUs in stage 3.
   - model_name: gold-sql
     litellm_params:
-      model: os.environ/SQL_MODEL          # e.g. openai/gold-sql-lora
+      model: os.environ/SQL_MODEL          # e.g. openai/gold-sql
       api_base: os.environ/SQL_API_BASE
       api_key: os.environ/SQL_API_KEY
 

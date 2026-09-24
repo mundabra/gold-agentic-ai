@@ -5,6 +5,7 @@
     gold eval  [--model M] [--min-accuracy 0.8]     quality: does the SQL return the right answer?
     gold bench [--model M] [--concurrency 1,4,8]    performance: latency, throughput, cost
     gold dataset finetune/seed_pairs.jsonl          stage 2: build a fine-tuning dataset
+    gold aiperf-payloads / aiperf-summary           stage 3: serving benchmarks with NVIDIA AIPerf (scripts/aiperf.sh)
 """
 
 import argparse
@@ -106,9 +107,17 @@ def _main() -> None:
     d.add_argument("--out", default="finetune/data")
     d.add_argument("--eval-questions", default="evals/questions.jsonl", help="held out: never used for training")
     d.add_argument("--no-definitions", action="store_true", help="train on bare questions only")
+    ap = sub.add_parser("aiperf-payloads", help="write GOLD's real SQL requests as NVIDIA AIPerf raw payloads")
+    ap.add_argument("--questions", default="evals/questions.jsonl")
+    ap.add_argument("--out", default="results/aiperf-payloads.jsonl")
+    ap.add_argument("--model", help="model name at the endpoint (default: GOLD_SQL_MODEL)")
+    ap.add_argument("--no-definitions", action="store_true", help="leave out the business definitions block")
+    asum = sub.add_parser("aiperf-summary", help="summarize an AIPerf run, one row per concurrency level")
+    asum.add_argument("run_dir")
+    asum.add_argument("--slo-ms", type=float, default=3000, help="latency target the goodput column refers to")
     args = parser.parse_args()
 
-    if args.command in {"eval", "bench", "dataset"}:
+    if args.command in {"eval", "bench", "dataset", "aiperf-payloads"}:
         # Engineer commands run on your machine: read .env, and reach the
         # Compose database on localhost unless told otherwise.
         load_env_file()
@@ -137,6 +146,19 @@ def _main() -> None:
                 print(f"FAILED quality gate: {arm} scored {score:.0%}, below {args.min_accuracy:.0%}", file=sys.stderr)
                 sys.exit(2)
             print(f"Passed quality gate: {arm} scored {score:.0%} (bar {args.min_accuracy:.0%})")
+    elif args.command == "aiperf-payloads":
+        from gold import aiperf
+
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        n = aiperf.write_payloads(args.questions, args.out, args.model, with_definitions=not args.no_definitions)
+        print(f"{n} payloads written to {args.out}")
+    elif args.command == "aiperf-summary":
+        from gold import aiperf
+
+        rows = aiperf.summarize(args.run_dir, args.slo_ms)
+        if not rows:
+            sys.exit(f"No AIPerf exports found in {args.run_dir}")
+        print(aiperf.to_markdown(rows, args.slo_ms))
     elif args.command == "dataset":
         from gold import dataset
 

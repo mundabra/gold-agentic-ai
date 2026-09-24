@@ -6,7 +6,7 @@
 
 A general model knows SQL. It does not know that your `amount` column excludes tax, or that "last year" means the last closed fiscal year. Definitions in the prompt fix a lot of that (see stage 1). Fine-tuning goes further: the conventions end up in the model's weights, so prompts get shorter and a 7B–32B model can do the job of a much larger one.
 
-Only the **SQL writer** is fine-tuned. The orchestrator and agents keep a general model with strong tool calling.
+Only the **SQL model** is fine-tuned. The orchestrator and agents keep a general model with strong tool calling.
 
 ## 1. Collect question/SQL pairs
 
