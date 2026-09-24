@@ -75,7 +75,7 @@ Then run `gold eval` and `gold bench` to confirm the change did not make answers
 | `GOLD_LLM_BASE_URL` | `http://litellm:4000/v1` | The OpenAI-compatible endpoint for every model call |
 | `GOLD_LLM_API_KEY` | `sk-gold-local` | Its API key |
 | `GOLD_ORCHESTRATOR_MODEL` / `GOLD_AGENT_MODEL` | `gold-general` | Tool-calling models for the orchestrator and the agents |
-| `GOLD_SQL_MODEL` | `gold-sql` | The SQL writer |
+| `GOLD_SQL_MODEL` | `gold-sql` | The SQL model (`gold-sql`) |
 | `GOLD_SQL_SYSTEM_PROMPT` | built-in | The SQL model's system prompt (match your fine-tune) |
 | `GOLD_SQL_INCLUDE_SCHEMA` | `true` | Append the schema to the SQL prompt |
 | `GOLD_SQL_PASS_DEFINITIONS` | `true` | Append business definitions to the question |

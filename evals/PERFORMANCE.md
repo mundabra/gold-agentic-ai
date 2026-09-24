@@ -4,11 +4,23 @@ Measured with [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) 0.13 on 24 Se
 
 **Setup:** `deepseek-v4-flash` (a reasoning model) on a hosted OpenAI-compatible API, called over the public internet from a laptop. 24 requests per concurrency level, a 3-second latency target, one run.
 
-| Concurrency | Errors | Req/s | Under 3 s | Median | p90 | p99 | First token (median) | First SQL token (median) | Per token | Output tok/s | Reasoning share |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 0 | 0.34 | 67% | 1.61 s | 5.40 s | 13.30 s | 0.66 s | 1.40 s | 4.1 ms | 75 | 70% |
-| 4 | 0 | 1.03 | 58% | 1.93 s | 4.59 s | 11.20 s | 0.62 s | 1.67 s | 5.0 ms | 257 | 74% |
-| 8 | 0 | 1.40 | 79% | 1.68 s | 4.08 s | 16.49 s | 0.68 s | 1.46 s | 4.4 ms | 435 | 80% |
+**Latency** (per SQL generation):
+
+| Concurrency | Requests | Errors | Req/s | Median | p90 | p99 | Under 3 s |
+|---|---|---|---|---|---|---|---|
+| 1 | 24 | 0 | 0.34 | 1.61 s | 5.40 s | 13.30 s | 67% |
+| 4 | 24 | 0 | 1.03 | 1.93 s | 4.59 s | 11.20 s | 58% |
+| 8 | 24 | 0 | 1.40 | 1.68 s | 4.08 s | 16.49 s | 79% |
+
+**Streaming and tokens:**
+
+| Concurrency | First token (median) | First SQL token (median) | Time per token | Output tokens/s | Reasoning share of output |
+|---|---|---|---|---|---|
+| 1 | 0.66 s | 1.40 s | 4.1 ms | 75 | 70% |
+| 4 | 0.62 s | 1.67 s | 5.0 ms | 257 | 74% |
+| 8 | 0.68 s | 1.46 s | 4.4 ms | 435 | 80% |
+
+"Under 3 s" is goodput: the share of requests that finished within the target. It doesn't rise or fall steadily with concurrency here, because with 24 requests a handful of long-thinking questions decide it.
 
 ## What it says
 

@@ -10,12 +10,12 @@ A hosted API needs no GPUs, no model operations and no procurement. It tells you
 
 ## 1. Choose models
 
-GOLD uses models in two roles:
+GOLD uses models in two roles, set by three variables (the orchestrator and the agents can use different models):
 
 | Role | Setting | What it needs |
 |---|---|---|
 | Orchestrator and agents | `GOLD_ORCHESTRATOR_MODEL`, `GOLD_AGENT_MODEL` | Reliable **tool calling**. Pick a model your provider documents as supporting function calling. |
-| SQL writer | `GOLD_SQL_MODEL` | Good SQL. Can be smaller and cheaper, or the same model. |
+| SQL model | `GOLD_SQL_MODEL` | Good SQL. Can be smaller and cheaper, or the same model. |
 
 Any provider with an OpenAI-compatible Chat Completions API works. Put the endpoint in `.env`:
 
@@ -70,7 +70,7 @@ gold bench --model provider/good-sql-model --concurrency 1,4,8 \
 | 8           | 2.321 s | 4.95 s   | 1.62  | 497.1        | 0      |
 ```
 
-<sub>Example output for one SQL model on one hosted API, one run. The cost column (per 1,000 SQL generations) appears when you pass prices. Your numbers will differ.</sub>
+<sub>Example output: one small run (16 requests per level) against one SQL model on a shared hosted API, so the numbers move between runs. For a larger measured run see [evals/PERFORMANCE.md](../evals/PERFORMANCE.md). The cost column (per 1,000 SQL generations) appears when you pass prices.</sub>
 
 ## 4. Write your own evaluation questions
 

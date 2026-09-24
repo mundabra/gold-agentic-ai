@@ -4,7 +4,7 @@ Instructions for AI coding agents (and people) working on GOLD. Read this before
 
 ## What GOLD is
 
-GOLD (Governed Open Language-to-Data) is a vendor-neutral reference architecture for "talk to your data" assistants. An orchestrator built on the OpenAI Agents SDK finds specialist agents in a registry and calls them over A2A. The Definitions agent resolves business terms from a governed glossary. The SQL agent writes one read-only query with a dedicated SQL model. Both use MCP tool servers backed by Postgres through a read-only, column-granted login. Every model call goes to one OpenAI-compatible endpoint, usually a LiteLLM gateway. See `docs/architecture.md`.
+GOLD (Governed Open Language-to-Data) is a vendor-neutral reference architecture for "talk to your data" assistants. An orchestrator built on the OpenAI Agents SDK finds specialist agents in a registry and calls them over A2A. The Definitions agent resolves business terms from a governed glossary. The SQL agent writes one read-only query with a dedicated SQL model. Both use MCP tool servers backed by Postgres through a read-only, column-granted login. Every model call goes to one OpenAI-compatible endpoint: a hosted API directly, or a LiteLLM gateway that routes several models. See `docs/architecture.md`.
 
 ## Setup and checks
 

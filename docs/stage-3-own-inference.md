@@ -118,10 +118,10 @@ The script writes the production SQL requests as AIPerf payloads (`gold aiperf-p
 
 | Metric | What it tells you |
 |---|---|
-| Under target (goodput) | Share of requests within `SLO_MS`. The number to agree with the business. |
-| First token | How long before anything streams back: queueing plus prompt processing. Prefix caching helps, because GOLD's system prompt and schema repeat on every call. |
+| Under target (goodput: share of requests within `SLO_MS`) | The number to agree with the business. |
+| First token (time to first token, TTFT) | How long before anything streams back: queueing plus prompt processing. Prefix caching helps, because GOLD's system prompt and schema repeat on every call. |
 | First SQL token | For reasoning models, when the answer itself starts, after the thinking. |
-| Per token (ITL) | Generation speed per request. Drops as concurrency rises and GPUs are shared. |
+| Per token (inter-token latency, ITL) | Time between streamed tokens. Rises as concurrency rises and GPUs are shared. |
 | Output tok/s | Total throughput: what one GPU setup can serve. |
 | Reasoning share | Tokens spent thinking rather than answering. A fine-tuned model that does not reason brings this near zero. |
 
