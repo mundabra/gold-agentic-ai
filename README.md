@@ -1,5 +1,8 @@
 # GOLD
 
+[![ci](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
 **Governed Open Language-to-Data.** Ask in plain language. Get the governed number.
 
 GOLD is an open-source reference architecture for **"talk to your data" assistants that enterprises can trust**. Business users ask questions in plain English. GOLD answers with the number, the business definition it used and the SQL it ran, so every answer can be checked. It runs on any Kubernetes cluster with any OpenAI-compatible model: a hosted API, your own fine-tuned model, or open models on your own GPUs.
