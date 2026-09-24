@@ -122,7 +122,10 @@ The evaluation runs through every stage ([how it works](docs/evaluation.md)):
 gold eval --model gold-sql --min-accuracy 0.9      # quality gate on the SQL step (fails CI below the bar)
 gold eval --system http://localhost:8080           # the whole running system, end to end
 gold bench --model gold-sql --concurrency 1,4,8    # latency, throughput, cost per 1,000 SQL generations
+scripts/aiperf.sh                                  # serving metrics with NVIDIA AIPerf: first token, per-token latency, goodput
 ```
+
+A measured AIPerf run is in [evals/PERFORMANCE.md](evals/PERFORMANCE.md). On a hosted reasoning model, about three quarters of the generated tokens were reasoning rather than SQL. That is the main reason to try a fine-tuned SQL model in stage 2.
 
 ## Governance built in
 
