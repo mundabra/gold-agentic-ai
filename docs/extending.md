@@ -59,6 +59,21 @@ Give an agent the server's URL in its `AgentsSdkExecutor(build_agent, {"crm-tool
 
 GOLD's tools use PostgreSQL today. The data tools are a thin layer (`gold/db.py`: `run_query`, `describe_schema`, `search_glossary`). To support another engine, implement those three functions for it, set `GOLD_SQL_DIALECT` to its SQLGlot dialect name, and describe the dialect in `GOLD_SQL_SYSTEM_PROMPT`.
 
+## Add verified queries
+
+Verified queries are questions an analyst has answered with SQL they vouch for. For each question, the Definitions agent finds the approved examples whose wording overlaps most (at least 60% of the question's meaningful words), and the SQL agent gets them as worked examples next to the definitions.
+
+Add them to the `verified_queries` table (see `deploy/postgres/02-glossary.sql`):
+
+```sql
+INSERT INTO verified_queries (question, sql, verified_by) VALUES
+  ('What was net revenue by region last quarter?', 'SELECT ...', 'finance.analytics@your-company.com');
+```
+
+Then run `gold verify-queries`. It checks that every example is read-only, runs, and is **not** one of your evaluation questions, because an example that repeats an evaluation question makes `gold eval` an unfair test. CI runs it on every change.
+
+Good examples cover your trickiest conventions, such as fiscal periods, net versus gross, and what counts as "active". Twenty good ones beat two hundred similar ones.
+
 ## Use a different model
 
 Change configuration, not code:

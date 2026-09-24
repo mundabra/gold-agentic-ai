@@ -32,7 +32,7 @@ Most "talk to your data" demos get the SQL right and the business wrong. The que
 
 GOLD makes the **meaning** of a question part of the system:
 
-1. **Agreed definitions first.** A Definitions agent looks up every business term in a governed glossary, with an owner per term, before any SQL is written.
+1. **Agreed definitions first.** A Definitions agent looks up every business term in a governed glossary, with an owner per term, and finds analyst-approved example queries for similar questions, before any SQL is written.
 2. **Governed execution.** A SQL agent writes one read-only query with a dedicated SQL model. The database itself enforces read-only access and hides personal-data columns.
 3. **Shown work.** Every answer carries the definition it used, the SQL it ran and a trace of the agents and tools behind it.
 4. **Measured, not assumed.** `gold eval` scores any model, or the whole running system, against questions with known-correct answers. Use it as a quality gate before any change ships.
@@ -41,13 +41,13 @@ GOLD makes the **meaning** of a question part of the system:
 
 | What was tested | Question + schema only | + agreed definitions |
 |---|---|---|
-| SQL step, `deepseek-v4-flash` | 65–80% | 90–100% |
-| SQL step, `gpt-oss-120b` | 90% | 95–100% |
-| Whole system, end to end | — | 80–90% |
+| SQL step, `deepseek-v4-flash` | 80–85% | 100% |
+| SQL step, `gpt-oss-120b` | 85–90% | 100% |
+| Whole system, end to end | — | 95% |
 
 Without definitions, every miss was about business meaning, not SQL syntax: "last year" read as today's date minus one year, or "active customers" counting everyone.
 
-Read these numbers with care: ranges span the last two runs, the set is small, and the glossary was written with the questions and adjusted after a failed run. The two whole-system misses were agent calls that did not finish under concurrent load. Treat this as a demonstration of the method, not a benchmark, and run `gold eval` on your own questions.
+Read these numbers with care: ranges span the last two runs, the set is small, and the glossary was written with the questions and adjusted after a failed run. The evaluation also found a real bug along the way: the orchestrator used to refuse questions whose everyday words had no glossary entry. Treat this as a demonstration of the method, not a benchmark, and run `gold eval` on your own questions.
 
 ## How it works
 
@@ -165,7 +165,7 @@ Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; t
 
 - [x] **Tracing and audit:** OpenTelemetry traces across every service, and a JSON audit record per question.
 - [x] **User identity and row-level security:** proxy or OIDC sign-in; the user's identity travels to the database, where row-level policies decide what they can see ([identity](docs/identity.md)).
-- [ ] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI.
+- [x] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI (`gold verify-queries`).
 - [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
 - [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).
 - [x] **NVIDIA Nemotron profile:** Nemotron 3 Super for the agents and Nemotron 3.5 Lightning for SQL, served with vLLM ([choosing models](docs/models.md)).

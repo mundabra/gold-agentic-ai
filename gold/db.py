@@ -133,3 +133,37 @@ def search_glossary(query: str, limit: int = 5) -> list[dict]:
                 rows = cur.fetchall()
         conn.rollback()
     return [{"term": t, "definition": d, "sql_hint": h, "owner": o} for t, d, h, o, _ in rows[:limit]]
+
+
+def search_verified_queries(question: str, limit: int = 3, min_overlap: float = 0.6) -> list[dict]:
+    """Analyst-approved queries whose questions share most of this question's meaningful words.
+
+    Words are compared after stemming and dropping stop words, and an example needs at least
+    `min_overlap` of the question's words. A loose match would hand the SQL model an example
+    about something else, which does more harm than no example.
+    """
+    sql = """
+        WITH q AS (SELECT tsvector_to_array(to_tsvector('english', %(q)s)) AS terms)
+        SELECT vq.question, vq.sql, vq.verified_by, vq.verified_at,
+               (SELECT count(*) FROM unnest(q.terms) t WHERE t = ANY (tsvector_to_array(vq.search)))::float
+                   / greatest(cardinality(q.terms), 1) AS overlap
+        FROM verified_queries vq, q
+        ORDER BY overlap DESC, vq.id
+        LIMIT %(limit)s
+    """
+    with connect(config.GLOSSARY_DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"q": question, "limit": limit})
+            rows = cur.fetchall()
+        conn.rollback()
+    return [
+        {"question": q, "sql": s, "verified_by": b, "verified_at": a.isoformat()}
+        for q, s, b, a, overlap in rows if overlap >= min_overlap
+    ]
+
+
+def all_verified_queries() -> list[dict]:
+    with connect(config.GLOSSARY_DATABASE_URL) as conn:
+        rows = conn.execute("SELECT question, sql, verified_by FROM verified_queries ORDER BY id").fetchall()
+        conn.rollback()
+    return [{"question": q, "sql": s, "verified_by": b} for q, s, b in rows]

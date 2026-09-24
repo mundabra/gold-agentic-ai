@@ -77,10 +77,16 @@ def same_result(expected: list[list], actual: list[list]) -> bool:
 
 
 def definitions_for(question: str) -> str:
-    return "\n".join(
+    """What production gives the SQL model: agreed definitions, then approved example queries."""
+    lines = [
         f"- {m['term']}: {m['definition']}" + (f" Hint: {m['sql_hint']}" if m["sql_hint"] else "")
         for m in db.search_glossary(question)
-    )
+    ]
+    examples = db.search_verified_queries(question)
+    if examples:
+        lines.append("Approved example queries:")
+        lines += [f"- {e['question']}\n  {e['sql']}" for e in examples]
+    return "\n".join(lines)
 
 
 def load_questions(path: str | Path) -> list[dict]:
@@ -147,8 +153,10 @@ async def _ask_system(q: dict, url: str, expected: list[list], sem: asyncio.Sema
     else:
         correct = False
         error = (output or {}).get("reason") if isinstance(output, dict) else "; ".join(failures) or "no query was run"
+    path = [f"{c['agent']}: {', '.join(s['tool'] for s in c.get('steps', [])) or 'no tools'}" for c in body.get("calls", [])]
     return {"id": q["id"], "arm": "system", "question": q["question"], "correct": correct, "error": error,
-            "sql": sql, "latency_s": round(time.perf_counter() - started, 3), "tokens": body.get("usage", {}).get("total_tokens", 0)}
+            "sql": sql, "latency_s": round(time.perf_counter() - started, 3), "tokens": body.get("usage", {}).get("total_tokens", 0),
+            "path": path or ["no agents called"], "answer": body.get("answer", "")[:400]}
 
 
 async def run_system(questions_path: str, url: str, concurrency: int = 2) -> dict:
@@ -183,6 +191,10 @@ def to_markdown(report: dict) -> str:
         lines += [f"**{r['id']} ({r['arm']})**: {r['question']}", "", f"```sql\n{r['sql']}\n```"]
         if r["error"]:
             lines.append(f"Error: {r['error']}")
+        if r.get("path"):
+            lines.append("What ran: " + " → ".join(r["path"]))
+        if r.get("answer") and not r["sql"]:
+            lines.append(f"Answer given: {r['answer']}")
         lines.append("")
     return "\n".join(lines)
 

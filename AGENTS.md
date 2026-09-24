@@ -49,7 +49,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 2. **Never weaken governance to make something work.** That covers the SQLGlot check, the function denylist, single-statement execution, the dry-run cost limit, column grants, row-level security, the signed user context, text scrubbing, the input guardrail and the registry token. If a test fails because of one of them, fix the caller.
 3. **No secrets in the repo.** No API keys, tokens or passwords other than the documented local defaults (`gold_reader`, `gold_admin`, `sk-gold-local`).
 4. **The SQL prompt contract is load-bearing.** Changing `gold/sql_model.py` changes what a fine-tuned model sees. Say so in the pull request and re-run `gold eval`.
-5. **The evaluation set is held out.** Never add `evals/questions.jsonl` questions to training data, and never edit reference SQL to make a model pass.
+5. **The evaluation set is held out.** Never add `evals/questions.jsonl` questions to training data or to `verified_queries`, and never edit reference SQL to make a model pass. `gold verify-queries` checks the latter.
 6. **Report only measured numbers.** Anything in `evals/RESULTS.md`, `evals/PERFORMANCE.md` or the README must come from a real `gold eval`, `gold bench` or `scripts/aiperf.sh` run, with its caveats.
 7. **Keep the chart's copies identical to the originals:** `deploy/postgres/` ↔ `deploy/helm/gold/files/postgres/`, and `deploy/guardrails/gold/*.yml` ↔ `deploy/helm/gold/files/guardrails/`.
 8. **Settings are environment variables.** Add new ones to `gold/config.py`, `compose.yaml`, the Helm chart (`values.yaml` and `templates/config.yaml`) and the settings table in `docs/extending.md`, all in the same change.

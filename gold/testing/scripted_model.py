@@ -109,8 +109,15 @@ def decide(body: dict) -> dict:
     if "search_glossary" in tools:  # definitions agent
         if "search_glossary" not in called:
             return {"tool_calls": [_tool_call("search_glossary", {"terms": user})]}
+        if "find_verified_queries" in tools and "find_verified_queries" not in called:
+            question = user.split(":", 1)[-1].strip()  # "Define the business terms in: <question>"
+            return {"tool_calls": [_tool_call("find_verified_queries", {"question": question})]}
         matches = json.loads(output["search_glossary"]).get("matches", [])
         bullets = [f"- **{m['term']}**: {m['definition']} (owner: {m['owner']})" for m in matches]
+        examples = json.loads(output.get("find_verified_queries") or "{}").get("examples", [])
+        if examples:
+            bullets.append("Approved example queries:")
+            bullets += [f"- {e['question']}: {e['sql']}" for e in examples]
         return {"content": "\n".join(bullets) or "No agreed definition found."}
 
     if "generate_sql" in tools:  # SQL agent
@@ -120,8 +127,9 @@ def decide(body: dict) -> dict:
             return {"tool_calls": [_tool_call("run_sql", {"sql": output["generate_sql"]})]}
         return {"content": f"```sql\n{output['generate_sql']}\n```\n\n{_markdown_table(output['run_sql'])}"}
 
-    # No tools: this is the dedicated SQL model being asked for a query.
-    lowered = user.lower()
+    # No tools: this is the dedicated SQL model being asked for a query. Match on the
+    # question only, not on the definitions and examples appended to it.
+    lowered = user.split("\n\nBusiness definitions")[0].split("\n\nDefinitions")[0].lower()
     for keywords, sql in CANNED_SQL:
         if any(k in lowered for k in keywords):
             return {"content": sql}
