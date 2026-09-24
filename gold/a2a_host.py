@@ -26,7 +26,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from gold import config, runlog, telemetry
+from gold import __version__, config, runlog, telemetry
 
 log = logging.getLogger("gold.a2a")
 
@@ -83,7 +83,7 @@ def agent_card(name: str, description: str, skills: list[AgentSkill]) -> AgentCa
     return AgentCard(
         name=name,
         description=description,
-        version="0.1.0",
+        version=__version__,
         default_input_modes=["text/plain"],
         default_output_modes=["text/plain", "application/json"],
         capabilities=AgentCapabilities(streaming=False),
