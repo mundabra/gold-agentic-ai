@@ -1,0 +1,12 @@
+GOLD is starting. Open the UI:
+
+  kubectl port-forward svc/{{ include "gold.fullname" . }}-orchestrator 8080:80
+  open http://localhost:8080
+
+Models are reached at: {{ include "gold.llmBaseUrl" . }}
+{{- if .Values.scriptedModel.enabled }}
+
+You are using the scripted stand-in model: only the example questions get
+meaningful answers. Set llm.baseUrl and llm.apiKey (stage 1) or enable the
+gateway (stages 2 and 3) to use real models.
+{{- end }}

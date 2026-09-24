@@ -1,0 +1,97 @@
+{{- if .Values.gateway.enabled }}
+{{- $name := include "gold.fullname" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-gateway
+  labels: {{- include "gold.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    model_list:
+    {{- range .Values.gateway.models }}
+      - model_name: {{ .alias }}
+        litellm_params:
+          model: {{ .model }}
+          api_base: {{ tpl .apiBase $ }}
+          {{- if .apiKeyEnv }}
+          api_key: os.environ/{{ .apiKeyEnv }}
+          {{- else }}
+          api_key: not-needed
+          {{- end }}
+    {{- end }}
+    router_settings:
+      num_retries: 2
+      timeout: 120
+    litellm_settings:
+      drop_params: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-gateway-keys
+  labels: {{- include "gold.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{- range $k, $v := .Values.gateway.providerKeys }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-gateway
+  labels:
+    {{- include "gold.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        {{- include "gold.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+      annotations:
+        checksum/config: {{ toYaml .Values.gateway.models | sha256sum }}
+    spec:
+      containers:
+        - name: litellm
+          image: {{ .Values.gateway.image }}
+          args: ["--config", "/app/config.yaml", "--port", "4000"]
+          ports:
+            - { name: http, containerPort: 4000 }
+          env:
+            - name: LITELLM_MASTER_KEY
+              valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" . }}, key: apiKey } }
+          envFrom:
+            - secretRef: { name: {{ $name }}-gateway-keys }
+          readinessProbe:
+            httpGet: { path: /health/liveliness, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: config, mountPath: /app/config.yaml, subPath: config.yaml }
+      volumes:
+        - name: config
+          configMap: { name: {{ $name }}-gateway }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-gateway
+  labels: {{- include "gold.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: gateway
+  ports:
+    - { name: http, port: 4000, targetPort: http }
+{{- end }}

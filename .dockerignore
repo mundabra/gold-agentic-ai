@@ -1,0 +1,8 @@
+.git
+.venv
+_reference
+results
+.stack-logs
+**/__pycache__
+.env
+deploy/helm

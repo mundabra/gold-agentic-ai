@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Start Postgres with the sample data and glossary
+        run: |
+          docker run -d --name gold-test-pg -p 55432:5432 \
+            -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin -e POSTGRES_PASSWORD=gold_admin \
+            -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" postgres:17-alpine
+          for i in $(seq 1 60); do
+            [ "$(docker logs gold-test-pg 2>&1 | grep -c 'ready to accept')" -ge 2 ] && break
+            sleep 1
+          done
+      - run: pip install -e ".[dev]"
+      - name: Unit tests and the full multi-agent flow (scripted model)
+        run: pytest -q
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: helm version   # preinstalled on GitHub's Ubuntu runners
+      - name: Chart files match the SQL the database loads
+        run: diff -r deploy/postgres deploy/helm/gold/files/postgres
+      - run: helm lint deploy/helm/gold
+      - run: |
+          helm template gold deploy/helm/gold > /dev/null
+          helm template gold deploy/helm/gold --set gateway.enabled=true --set vllm.enabled=true \
+            --set scriptedModel.enabled=false --set ingress.enabled=true --set networkPolicy.enabled=true > /dev/null
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t gold:ci .

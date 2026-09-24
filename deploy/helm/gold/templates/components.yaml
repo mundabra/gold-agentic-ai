@@ -1,0 +1,97 @@
+{{- $root := . -}}
+{{- $name := include "gold.fullname" . -}}
+{{- $all := deepCopy .Values.components -}}
+{{- if .Values.scriptedModel.enabled }}{{- $_ := set $all "scripted-model" (dict "replicas" 1) -}}{{- end }}
+{{- $needsDb := list "mcp-data" "mcp-glossary" -}}
+{{- $needsLlm := list "orchestrator" "sql-agent" "definitions-agent" -}}
+{{- $needsRegistry := list "registry" "sql-agent" "definitions-agent" -}}
+{{- range $component, $cfg := $all }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-{{ $component }}
+  labels:
+    {{- include "gold.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  replicas: {{ $cfg.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: {{ $component }}
+  template:
+    metadata:
+      labels:
+        {{- include "gold.labels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $component }}
+      annotations:
+        checksum/config: {{ include (print $root.Template.BasePath "/config.yaml") $root | sha256sum }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: {{ $component }}
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          args: ["serve", {{ $component | quote }}]
+          ports:
+            - { name: http, containerPort: 8000 }
+          envFrom:
+            - configMapRef: { name: {{ $name }}-env }
+          env:
+            - name: GOLD_PUBLIC_URL
+              value: "http://{{ $name }}-{{ $component }}:8000"
+            {{- /* Each secret goes only to the components that use it. */}}
+            {{- if has $component $needsLlm }}
+            - name: GOLD_LLM_API_KEY
+              valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" $root }}, key: apiKey } }
+            {{- end }}
+            {{- if has $component $needsDb }}
+            - name: GOLD_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: url } }
+            - name: GOLD_GLOSSARY_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: glossaryUrl, optional: true } }
+            {{- end }}
+            {{- if has $component $needsRegistry }}
+            - name: GOLD_REGISTRY_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" $root }}, key: registryToken, optional: true } }
+            {{- end }}
+            {{- with $root.Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources: {{- toYaml $root.Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-{{ $component }}
+  labels:
+    {{- include "gold.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  type: {{ if eq $component "orchestrator" }}{{ $root.Values.service.type }}{{ else }}ClusterIP{{ end }}
+  selector:
+    app.kubernetes.io/instance: {{ $root.Release.Name }}
+    app.kubernetes.io/component: {{ $component }}
+  ports:
+    - name: http
+      port: {{ if eq $component "orchestrator" }}80{{ else }}8000{{ end }}
+      targetPort: http
+---
+{{- end }}

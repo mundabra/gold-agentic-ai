@@ -1,0 +1,128 @@
+# GOLD Helm values. Defaults give a working install with the scripted stand-in
+# model, so you can see the whole flow before connecting a real one.
+
+image:
+  repository: ghcr.io/mundabra/gold-ai-agent   # published on each release; or build the Dockerfile yourself
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# --- Models. Every model call goes to one OpenAI-compatible endpoint.
+llm:
+  # Leave empty to use the gateway (if enabled), else the scripted model.
+  baseUrl: ""
+  apiKey: "sk-gold-local"       # stored in a Secret; or use existingSecret (key: apiKey). Also the gateway's master key (must start with "sk-").
+  existingSecret: ""
+  orchestratorModel: gold-general
+  agentModel: gold-general
+  sqlModel: gold-sql
+
+# The SQL model's prompt contract. A fine-tuned model must see exactly the
+# prompt it was trained on.
+sql:
+  systemPrompt: ""
+  includeSchema: true
+  passDefinitions: true
+  maxTokens: 2048
+
+# Guardrails on every query.
+governance:
+  maxRows: 50
+  maxQueryCost: 1000000          # dry-run limit on the planner's cost estimate; 0 turns it off
+  piiColumns: "email,phone,fax,address"
+  openaiTracing: false           # the Agents SDK's trace export to OpenAI stays off unless you opt in
+
+# Shared secret agents need to register with the registry. Leave empty only on a trusted network.
+registry:
+  token: ""
+
+# --- Business database. Use the bundled Postgres with the sample data, or
+# point at your own read-only replica with a read-only login.
+database:
+  url: ""                        # e.g. postgresql://reader:pass@db:5432/sales (overrides postgres.*)
+  glossaryUrl: ""                # optional separate database for the glossary table
+  existingSecret: ""             # or a Secret with keys: url (and optionally glossaryUrl)
+  schemas: "public"              # schemas the SQL agent may see and query
+
+postgres:
+  enabled: true
+  image: postgres:17-alpine
+  adminPassword: gold_admin
+  readerPassword: gold_reader
+  storage: 2Gi
+
+# --- GOLD components (same image, different command).
+components:
+  orchestrator: { replicas: 1 }
+  registry: { replicas: 1 }       # in-memory: keep at 1
+  sql-agent: { replicas: 1 }
+  definitions-agent: { replicas: 1 }
+  mcp-data: { replicas: 1 }
+  mcp-glossary: { replicas: 1 }
+
+resources:
+  requests: { cpu: 100m, memory: 192Mi }
+  limits: { memory: 512Mi }
+
+# Extra environment variables for every GOLD component, e.g. [{name: FOO, value: bar}].
+extraEnv: []
+
+# Only the connections GOLD needs are allowed (requires a CNI that enforces NetworkPolicy).
+networkPolicy:
+  enabled: false
+
+service:
+  type: ClusterIP                # the orchestrator (UI + API) on port 80
+
+ingress:
+  enabled: false
+  className: ""
+  host: gold.example.com
+  tls: []
+
+# Scripted stand-in model with canned answers. For a first look and for smoke tests.
+scriptedModel:
+  enabled: true
+
+# --- Stages 2 and 3: LiteLLM gateway. GOLD asks for the aliases below; the
+# gateway decides which endpoint serves them.
+gateway:
+  enabled: false
+  image: ghcr.io/berriai/litellm:main-stable
+  models:
+    - alias: gold-general
+      model: openai/your-tool-calling-model     # "openai/" = any OpenAI-compatible server
+      apiBase: https://your-provider.example/v1
+      apiKeyEnv: GENERAL_API_KEY
+    - alias: gold-sql
+      model: openai/gold-sql                     # served by the vLLM server below
+      apiBase: "http://{{ .Release.Name }}-vllm-sql:8000/v1"   # templated: follows your release name
+      apiKeyEnv: ""
+  # Provider keys, stored in a Secret and exposed to the gateway as env vars.
+  providerKeys: {}
+  #  GENERAL_API_KEY: "..."
+
+# --- Stage 3: serve open models on your own GPUs with vLLM.
+vllm:
+  enabled: false
+  image: vllm/vllm-openai:latest               # pin to a version you have tested
+  servers:
+    - name: sql
+      model: Qwen/Qwen2.5-Coder-7B-Instruct
+      servedModelName: gold-sql-base
+      # Serve a LoRA adapter from stage 2 under the name GOLD asks for.
+      loraModules: "gold-sql=/adapters/gold-sql"
+      adapterClaim: gold-sql-adapters            # PVC holding adapters/gold-sql
+      gpus: 1
+      extraArgs: ["--max-model-len", "8192"]       # add "--max-lora-rank", "32" for adapters above rank 16
+    # A general model with tool calling for the agents, for example:
+    # - name: general
+    #   model: Qwen/Qwen2.5-32B-Instruct
+    #   servedModelName: gold-general
+    #   gpus: 2
+    #   extraArgs: ["--enable-auto-tool-choice", "--tool-call-parser", "hermes", "--tensor-parallel-size", "2"]
+  huggingFaceTokenSecret: ""                     # Secret with key: token, for gated models
+  nodeSelector: {}
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLD</title>
+<style>
+  :root {
+    --ground: #F3F4F2;
+    --surface: #FFFFFF;
+    --raised: #FAFAF8;
+    --ink: #1C1F22;
+    --muted: #61676E;
+    --rule: #DADDDA;
+    --gold: #9A6B12;
+    --gold-soft: #F6EEDC;
+    --ok: #2F7D4F;
+    --bad: #B23A30;
+    --code: #EEF0EE;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121416;
+      --surface: #1A1D20;
+      --raised: #1F2327;
+      --ink: #E7E9EA;
+      --muted: #9AA1A8;
+      --rule: #2E3338;
+      --gold: #E0B45A;
+      --gold-soft: #2C2415;
+      --ok: #6CC08F;
+      --bad: #F08A80;
+      --code: #24282C;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 var(--sans); }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--surface);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand b { font-size: 20px; letter-spacing: 0.14em; color: var(--gold); }
+  .brand span { color: var(--muted); font-size: 13px; }
+  .agents { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+  .chip { border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
+  .chip.off i { background: var(--bad); }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; height: calc(100% - 59px); }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; height: auto; } }
+
+  .chat { display: flex; flex-direction: column; min-height: 0; }
+  .log { flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 18px; }
+  .msg { max-width: 820px; }
+  .msg.user { align-self: flex-end; background: var(--gold-soft); border-radius: 10px; padding: 10px 14px; }
+  .msg.bot { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+  .msg.bot.blocked { border-color: var(--bad); }
+  .msg .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .msg p { margin: 0 0 10px; }
+  .msg p:last-child { margin-bottom: 0; }
+  .msg h3, .msg h4 { margin: 12px 0 6px; font-size: 15px; }
+  .msg ul { margin: 0 0 10px; padding-left: 20px; }
+  pre { background: var(--code); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font: 12.5px/1.5 var(--mono); margin: 0 0 10px; white-space: pre; }
+  code { font-family: var(--mono); font-size: 0.9em; background: var(--code); padding: 1px 4px; border-radius: 3px; }
+  pre code { background: none; padding: 0; }
+  .tbl { overflow-x: auto; margin: 0 0 10px; }
+  table { border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { border-bottom: 1px solid var(--rule); padding: 5px 12px 5px 0; text-align: left; }
+  th { font-weight: 600; }
+
+  .empty { margin: auto; max-width: 620px; text-align: center; color: var(--muted); padding: 40px 0; }
+  .empty h1 { color: var(--ink); font-size: 24px; margin: 0 0 8px; font-weight: 650; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+  .examples button { font: inherit; font-size: 13.5px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .examples button:hover { border-color: var(--gold); }
+
+  form { display: flex; gap: 10px; padding: 14px 20px 18px; border-top: 1px solid var(--rule); background: var(--surface); }
+  textarea { flex: 1; resize: none; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; min-height: 46px; max-height: 160px; }
+  textarea:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .send { font: inherit; font-weight: 600; background: var(--gold); color: var(--surface); border: 0; border-radius: 8px; padding: 0 20px; cursor: pointer; }
+  .send:disabled { opacity: 0.5; cursor: default; }
+
+  aside { border-left: 1px solid var(--rule); background: var(--surface); overflow-y: auto; padding: 20px; }
+  @media (max-width: 960px) { aside { border-left: 0; border-top: 1px solid var(--rule); } }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  .hint { color: var(--muted); font-size: 13.5px; }
+  .call { border: 1px solid var(--rule); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: var(--raised); }
+  .call-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 14px; }
+  .call-head small { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .call-req { color: var(--muted); font-size: 13px; margin: 6px 0 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .step { font-size: 12.5px; margin-top: 8px; }
+  .step b { font-family: var(--mono); font-weight: 500; color: var(--gold); }
+  .step pre { margin-top: 4px; font-size: 11.5px; max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .msg pre { white-space: pre-wrap; word-break: break-word; }
+  .totals { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; font-variant-numeric: tabular-nums; }
+  .fail { color: var(--bad); font-size: 13px; }
+  @media (prefers-reduced-motion: no-preference) { .thinking::after { content: " …"; animation: blink 1.2s infinite; } }
+  @keyframes blink { 50% { opacity: 0.2; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>GOLD</b><span>Ask in plain language. Get the governed number.</span></div>
+  <div class="agents" id="agents" aria-live="polite"></div>
+</header>
+<main>
+  <section class="chat">
+    <div class="log" id="log">
+      <div class="empty" id="empty">
+        <h1>Ask a business question in plain English</h1>
+        <div>Answers use your company's agreed definitions, run read-only, and show the SQL behind every number.</div>
+        <div class="examples" id="examples"></div>
+      </div>
+    </div>
+    <form id="form">
+      <label for="q" class="hint" style="position:absolute;left:-9999px">Question</label>
+      <textarea id="q" rows="1" placeholder="What was our revenue by country last year?"></textarea>
+      <button class="send" id="send" type="submit">Ask</button>
+    </form>
+  </section>
+  <aside>
+    <h2>How this answer was made</h2>
+    <div id="trace"><p class="hint">Each answer lists which agents were called, the tools they used, the SQL that ran, and what it cost in tokens and time.</p></div>
+  </aside>
+</main>
+<script>
+const EXAMPLES = [
+  "What was our revenue by country last year?",
+  "Who are our top 5 customers by lifetime value?",
+  "Which genre earned the most revenue last year?",
+  "How many active customers do we have?",
+  "Delete all customers in Brazil",
+];
+const $ = (id) => document.getElementById(id);
+let sessionId = null;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function inline(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+// Small markdown renderer: code blocks, tables, headings, bullets, paragraphs.
+function md(text) {
+  const lines = String(text).replace(/\r/g, "").split("\n");
+  const out = [];
+  for (let i = 0; i < lines.length; ) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      const body = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) body.push(lines[i++]);
+      i++;
+      out.push(`<pre><code>${esc(body.join("\n"))}</code></pre>`);
+    } else if (line.trim().startsWith("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) rows.push(lines[i++]);
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const body = rows.filter((r) => r.replace(/[|:\-\s]/g, "") !== "");
+      const head = cells(body[0] || "");
+      const rest = body.slice(1);
+      out.push(`<div class="tbl"><table><thead><tr>${head.map((h) => `<th>${inline(h)}</th>`).join("")}</tr></thead><tbody>${rest
+        .map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`)
+        .join("")}</tbody></table></div>`);
+    } else if (/^#{1,6}\s/.test(line)) {
+      out.push(`<h4>${inline(line.replace(/^#+\s*/, ""))}</h4>`);
+      i++;
+    } else if (/^\s*[-*]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*[-*]\s+/, ""));
+      out.push(`<ul>${items.map((t) => `<li>${inline(t)}</li>`).join("")}</ul>`);
+    } else if (!line.trim()) {
+      i++;
+    } else {
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !/^(\s*[-*]\s+|#|\||```)/.test(lines[i].trim())) para.push(lines[i++]);
+      out.push(`<p>${inline(para.join(" "))}</p>`);
+    }
+  }
+  return out.join("");
+}
+
+function addMessage(role, html, extraClass = "") {
+  $("empty")?.remove();
+  const div = document.createElement("div");
+  div.className = `msg ${role} ${extraClass}`;
+  div.innerHTML = html;
+  $("log").appendChild(div);
+  div.scrollIntoView({ block: "end" });
+  return div;
+}
+
+function stepInput(step) {
+  const input = step.input || {};
+  if (typeof input === "object" && !Object.keys(input).length) return "";
+  if (typeof input === "object" && input.sql) return input.sql;
+  if (typeof input === "object" && input.question) return input.question + (input.definitions ? `\n\n${input.definitions}` : "");
+  return typeof input === "string" ? input : JSON.stringify(input, null, 1);
+}
+
+function renderTrace(body) {
+  if (body.blocked) {
+    $("trace").innerHTML = `<p class="hint">Stopped by the read-only guardrail before any model was called. No agents ran and no tokens were used.</p>`;
+    return;
+  }
+  const calls = body.calls.map((c) => `
+    <div class="call">
+      <div class="call-head"><span>${esc(c.agent)}</span><small>${(c.elapsed_ms / 1000).toFixed(1)} s · ${c.usage.total_tokens || 0} tok</small></div>
+      <div class="call-req">${esc(c.request)}</div>
+      ${c.failure ? `<div class="fail">${esc(c.failure)}</div>` : ""}
+      ${c.steps.map((s) => { const input = stepInput(s); return `<div class="step"><b>${esc(s.tool)}</b>${input ? `<pre>${esc(input)}</pre>` : ""}</div>`; }).join("")}
+    </div>`).join("");
+  const u = body.usage || {};
+  $("trace").innerHTML = (calls || `<p class="hint">No specialist agents were called.</p>`) +
+    `<div class="totals">${u.model_requests || 0} model calls · ${u.input_tokens || 0} in / ${u.output_tokens || 0} out tokens · ${(body.elapsed_ms / 1000).toFixed(1)} s</div>`;
+}
+
+async function ask(question) {
+  question = question.trim();
+  if (!question) return;
+  addMessage("user", esc(question));
+  const pending = addMessage("bot", `<span class="thinking">Asking the agents</span>`);
+  $("send").disabled = true;
+  $("q").value = "";
+  try {
+    const res = await fetch("api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, session_id: sessionId }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || res.statusText);
+    sessionId = body.session_id;
+    pending.innerHTML = md(body.answer) + `<div class="meta">${body.calls.length} agent calls · ${(body.elapsed_ms / 1000).toFixed(1)} s</div>`;
+    if (body.blocked) pending.classList.add("blocked");
+    renderTrace(body);
+  } catch (err) {
+    pending.classList.add("blocked");
+    pending.innerHTML = `<p>Something went wrong: ${esc(err.message)}</p>`;
+  } finally {
+    $("send").disabled = false;
+    $("q").focus();
+  }
+}
+
+async function loadAgents() {
+  try {
+    const res = await fetch("api/agents");
+    const agents = await res.json();
+    $("agents").innerHTML = agents.length
+      ? agents.map((a) => `<span class="chip" title="${esc(a.description)}"><i></i>${esc(a.name)}</span>`).join("")
+      : `<span class="chip off"><i></i>No agents registered yet</span>`;
+  } catch {
+    $("agents").innerHTML = `<span class="chip off"><i></i>Registry unreachable</span>`;
+  }
+}
+
+$("examples").innerHTML = EXAMPLES.map((e) => `<button type="button">${esc(e)}</button>`).join("");
+$("examples").addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") ask(e.target.textContent); });
+$("form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value); });
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("q").value); } });
+loadAgents();
+setInterval(loadAgents, 15000);
+// Shareable questions: /?ask=... fills in the question; the viewer still clicks Ask.
+const preset = new URLSearchParams(location.search).get("ask");
+if (preset) $("q").value = preset;
+</script>
+</body>
+</html>

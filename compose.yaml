@@ -1,0 +1,133 @@
+# GOLD on one machine. Every service is the same image running a different component.
+#
+#   cp .env.example .env                          # choose your model endpoint
+#   docker compose --profile scripted up --build   # no API key; or plain "up" with a real endpoint in .env
+#   open http://localhost:8080
+#
+# Profiles:
+#   scripted  a stand-in model with canned answers: see the whole flow with no API key
+#   gateway   LiteLLM Proxy: one endpoint in front of several models (stages 2 and 3)
+#   example   a third agent (examples/trends_agent.py) that joins without any orchestrator change
+
+x-gold: &gold
+  build: .
+  image: gold:local
+  restart: unless-stopped
+  environment: &gold-env
+    GOLD_LLM_BASE_URL: ${GOLD_LLM_BASE_URL:-http://scripted-model:8000/v1}
+    GOLD_LLM_API_KEY: ${GOLD_LLM_API_KEY:-not-needed}
+    GOLD_ORCHESTRATOR_MODEL: ${GOLD_ORCHESTRATOR_MODEL:-gold-general}
+    GOLD_AGENT_MODEL: ${GOLD_AGENT_MODEL:-gold-general}
+    GOLD_SQL_MODEL: ${GOLD_SQL_MODEL:-gold-sql}
+    GOLD_SQL_SYSTEM_PROMPT: ${GOLD_SQL_SYSTEM_PROMPT:-}
+    GOLD_SQL_INCLUDE_SCHEMA: ${GOLD_SQL_INCLUDE_SCHEMA:-true}
+    GOLD_SQL_PASS_DEFINITIONS: ${GOLD_SQL_PASS_DEFINITIONS:-true}
+    GOLD_SQL_MAX_TOKENS: ${GOLD_SQL_MAX_TOKENS:-2048}
+    GOLD_MAX_ROWS: ${GOLD_MAX_ROWS:-50}
+    GOLD_MAX_QUERY_COST: ${GOLD_MAX_QUERY_COST:-1000000}
+    GOLD_PII_COLUMNS: ${GOLD_PII_COLUMNS:-email,phone,fax,address}
+    GOLD_OPENAI_TRACING: ${GOLD_OPENAI_TRACING:-false}
+    GOLD_REGISTRY_TOKEN: ${GOLD_REGISTRY_TOKEN:-}
+    # Inside the Compose network; the CLI on your machine uses localhost:5432 instead.
+    GOLD_DATABASE_URL: ${GOLD_COMPOSE_DATABASE_URL:-postgresql://gold_reader:${GOLD_READER_PASSWORD:-gold_reader}@postgres:5432/gold}
+    GOLD_GLOSSARY_DATABASE_URL: ${GOLD_GLOSSARY_DATABASE_URL:-}
+    GOLD_DB_SCHEMAS: ${GOLD_DB_SCHEMAS:-public}
+    GOLD_REGISTRY_URL: http://registry:8000
+    GOLD_DATA_MCP_URL: http://mcp-data:8000/mcp
+    GOLD_GLOSSARY_MCP_URL: http://mcp-glossary:8000/mcp
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gold
+      POSTGRES_USER: gold_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gold_admin}
+      GOLD_READER_PASSWORD: ${GOLD_READER_PASSWORD:-gold_reader}
+    ports:
+      - "127.0.0.1:${GOLD_DB_PORT:-5432}:5432"    # for gold eval / bench / dataset on your machine
+    volumes:
+      - ./deploy/postgres:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gold_admin -d gold"]
+      interval: 5s
+      retries: 20
+
+  registry:
+    <<: *gold
+    command: ["serve", "registry"]
+
+  mcp-data:
+    <<: *gold
+    command: ["serve", "mcp-data"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  mcp-glossary:
+    <<: *gold
+    command: ["serve", "mcp-glossary"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  sql-agent:
+    <<: *gold
+    command: ["serve", "sql-agent"]
+    environment:
+      <<: *gold-env
+      GOLD_PUBLIC_URL: http://sql-agent:8000
+    depends_on:
+      registry: { condition: service_healthy }
+      mcp-data: { condition: service_healthy }
+
+  definitions-agent:
+    <<: *gold
+    command: ["serve", "definitions-agent"]
+    environment:
+      <<: *gold-env
+      GOLD_PUBLIC_URL: http://definitions-agent:8000
+    depends_on:
+      registry: { condition: service_healthy }
+      mcp-glossary: { condition: service_healthy }
+
+  orchestrator:
+    <<: *gold
+    command: ["serve", "orchestrator"]
+    ports:
+      - "127.0.0.1:${GOLD_PORT:-8080}:8000"
+    depends_on:
+      registry: { condition: service_healthy }
+
+  scripted-model:
+    <<: *gold
+    profiles: ["scripted"]
+    command: ["serve", "scripted-model"]
+
+  trends-agent:
+    <<: *gold
+    profiles: ["example"]
+    entrypoint: ["python", "examples/trends_agent.py"]
+    command: []
+    environment:
+      <<: *gold-env
+      GOLD_PUBLIC_URL: http://trends-agent:8000
+    depends_on:
+      registry: { condition: service_healthy }
+      mcp-data: { condition: service_healthy }
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    profiles: ["gateway"]
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    env_file: [.env]
+    environment:
+      LITELLM_MASTER_KEY: ${GOLD_LLM_API_KEY:-sk-gold-local}   # LiteLLM master keys start with "sk-"
+    volumes:
+      - ./deploy/litellm/config.yaml:/app/config.yaml:ro
+    ports:
+      - "127.0.0.1:4000:4000"
+
+volumes:
+  pgdata:

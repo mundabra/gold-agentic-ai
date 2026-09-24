@@ -1,0 +1,31 @@
+# LiteLLM Proxy: one OpenAI-compatible endpoint, two stable model aliases.
+# GOLD only ever asks for "gold-general" and "gold-sql". Changing which model
+# serves them is an edit here, never a code change.
+#
+# Values come from environment variables (see .env.example). LiteLLM supports
+# 100+ providers; see https://docs.litellm.ai/docs/providers for other prefixes.
+
+model_list:
+  # Orchestrator and agents: needs reliable tool calling.
+  - model_name: gold-general
+    litellm_params:
+      model: os.environ/GENERAL_MODEL      # e.g. openai/<model id>; "openai/" = any OpenAI-compatible server
+      api_base: os.environ/GENERAL_API_BASE
+      api_key: os.environ/GENERAL_API_KEY
+
+  # SQL writer: a hosted model in stage 1, your fine-tuned model in stage 2,
+  # served on your own GPUs in stage 3.
+  - model_name: gold-sql
+    litellm_params:
+      model: os.environ/SQL_MODEL          # e.g. openai/gold-sql-lora
+      api_base: os.environ/SQL_API_BASE
+      api_key: os.environ/SQL_API_KEY
+
+router_settings:
+  num_retries: 2
+  timeout: 120
+
+litellm_settings:
+  drop_params: true
+  # Send model-level traces to your own observability stack, for example:
+  # callbacks: ["otel"]

@@ -1,0 +1,80 @@
+{{- if and .Values.postgres.enabled (not .Values.database.url) (not .Values.database.existingSecret) }}
+{{- $name := include "gold.fullname" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-postgres-init
+  labels: {{- include "gold.labels" . | nindent 4 }}
+data:
+{{ (.Files.Glob "files/postgres/*").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-postgres
+  labels: {{- include "gold.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  adminPassword: {{ .Values.postgres.adminPassword | quote }}
+  readerPassword: {{ .Values.postgres.readerPassword | quote }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-postgres
+  labels:
+    {{- include "gold.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ $name }}-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "gold.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - { name: pg, containerPort: 5432 }
+          env:
+            - { name: POSTGRES_DB, value: gold }
+            - { name: POSTGRES_USER, value: gold_admin }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $name }}-postgres, key: adminPassword } }
+            - name: GOLD_READER_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $name }}-postgres, key: readerPassword } }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "gold_admin", "-d", "gold"] }
+            periodSeconds: 5
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: init, mountPath: /docker-entrypoint-initdb.d }
+      volumes:
+        - name: init
+          configMap: { name: {{ $name }}-postgres-init, defaultMode: 0755 }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: {{ .Values.postgres.storage }} } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-postgres
+  labels: {{- include "gold.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: postgres
+  ports:
+    - { name: pg, port: 5432, targetPort: pg }
+{{- end }}

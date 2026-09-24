@@ -1,0 +1,51 @@
+{{- $name := include "gold.fullname" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-env
+  labels: {{- include "gold.labels" . | nindent 4 }}
+data:
+  GOLD_LLM_BASE_URL: {{ include "gold.llmBaseUrl" . | quote }}
+  GOLD_ORCHESTRATOR_MODEL: {{ .Values.llm.orchestratorModel | quote }}
+  GOLD_AGENT_MODEL: {{ .Values.llm.agentModel | quote }}
+  GOLD_SQL_MODEL: {{ .Values.llm.sqlModel | quote }}
+  GOLD_SQL_SYSTEM_PROMPT: {{ .Values.sql.systemPrompt | quote }}
+  GOLD_SQL_INCLUDE_SCHEMA: {{ .Values.sql.includeSchema | quote }}
+  GOLD_SQL_PASS_DEFINITIONS: {{ .Values.sql.passDefinitions | quote }}
+  GOLD_SQL_MAX_TOKENS: {{ .Values.sql.maxTokens | int64 | quote }}
+  GOLD_MAX_ROWS: {{ .Values.governance.maxRows | int64 | quote }}
+  GOLD_MAX_QUERY_COST: {{ .Values.governance.maxQueryCost | int64 | quote }}
+  GOLD_PII_COLUMNS: {{ .Values.governance.piiColumns | quote }}
+  GOLD_OPENAI_TRACING: {{ .Values.governance.openaiTracing | quote }}
+  GOLD_DB_SCHEMAS: {{ .Values.database.schemas | quote }}
+  GOLD_REGISTRY_URL: "http://{{ $name }}-registry:8000"
+  GOLD_DATA_MCP_URL: "http://{{ $name }}-mcp-data:8000/mcp"
+  GOLD_GLOSSARY_MCP_URL: "http://{{ $name }}-mcp-glossary:8000/mcp"
+---
+{{- if not .Values.llm.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-llm
+  labels: {{- include "gold.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  apiKey: {{ .Values.llm.apiKey | quote }}
+  registryToken: {{ .Values.registry.token | quote }}
+---
+{{- end }}
+{{- if not .Values.database.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}-db
+  labels: {{- include "gold.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{- if .Values.database.url }}
+  url: {{ .Values.database.url | quote }}
+  {{- else }}
+  url: "postgresql://gold_reader:{{ .Values.postgres.readerPassword }}@{{ $name }}-postgres:5432/gold"
+  {{- end }}
+  glossaryUrl: {{ .Values.database.glossaryUrl | quote }}
+{{- end }}

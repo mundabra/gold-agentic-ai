@@ -1,0 +1,86 @@
+{{- if .Values.vllm.enabled }}
+{{- $root := . -}}
+{{- $name := include "gold.fullname" . -}}
+{{- range .Values.vllm.servers }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-vllm-{{ .name }}
+  labels:
+    {{- include "gold.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: vllm-{{ .name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      app.kubernetes.io/component: vllm-{{ .name }}
+  template:
+    metadata:
+      labels:
+        {{- include "gold.labels" $root | nindent 8 }}
+        app.kubernetes.io/component: vllm-{{ .name }}
+    spec:
+      {{- with $root.Values.vllm.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.vllm.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: vllm
+          image: {{ $root.Values.vllm.image }}
+          args:
+            - --model={{ .model }}
+            - --served-model-name={{ .servedModelName }}
+            - --port=8000
+            {{- if .loraModules }}
+            - --enable-lora
+            - --lora-modules={{ .loraModules }}
+            {{- end }}
+            {{- range .extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - { name: http, containerPort: 8000 }
+          {{- if $root.Values.vllm.huggingFaceTokenSecret }}
+          env:
+            - name: HF_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ $root.Values.vllm.huggingFaceTokenSecret }}, key: token } }
+          {{- end }}
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60
+          resources:
+            limits: { nvidia.com/gpu: {{ .gpus | default 1 }} }
+          volumeMounts:
+            - { name: shm, mountPath: /dev/shm }
+            - { name: cache, mountPath: /root/.cache/huggingface }
+            {{- if .adapterClaim }}
+            - { name: adapters, mountPath: /adapters, readOnly: true }
+            {{- end }}
+      volumes:
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 8Gi }
+        - name: cache
+          emptyDir: {}
+        {{- if .adapterClaim }}
+        - name: adapters
+          persistentVolumeClaim: { claimName: {{ .adapterClaim }} }
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-vllm-{{ .name }}
+  labels: {{- include "gold.labels" $root | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ $root.Release.Name }}
+    app.kubernetes.io/component: vllm-{{ .name }}
+  ports:
+    - { name: http, port: 8000, targetPort: http }
+---
+{{- end }}
+{{- end }}

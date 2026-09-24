@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+results/
+.stack-logs/
+finetune/data/
+adapters/
+_reference/
+.DS_Store
+.pytest_cache/
