@@ -34,7 +34,7 @@ GOLD makes the **meaning** of a question part of the system:
 
 1. **Agreed definitions first.** A Definitions agent looks up every business term in a governed glossary, with an owner per term, and finds analyst-approved example queries for similar questions, before any SQL is written.
 2. **Governed execution.** A SQL agent writes one read-only query with a dedicated SQL model. The database itself enforces read-only access and hides personal-data columns.
-3. **Shown work.** Every answer carries the definition it used, the SQL it ran and a trace of the agents and tools behind it.
+3. **Shown work.** Every answer carries the definition it used, the SQL it ran and a trace of the agents and tools behind it. When the result has a chartable shape, the UI draws a bar or line chart from the query's own rows, never from the model's text.
 4. **Measured, not assumed.** `gold eval` scores any model, or the whole running system, against questions with known-correct answers. Use it as a quality gate before any change ships.
 
 **Measured on 20 business questions** over the sample database (24 September 2026; [every run and its caveats](evals/RESULTS.md)). "SQL step" scores the SQL model alone; "whole system" asks the running agents.
@@ -169,7 +169,7 @@ Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; t
 - [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
 - [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).
 - [x] **NVIDIA Nemotron profile:** Nemotron 3 Super for the agents and Nemotron 3.5 Lightning for SQL, served with vLLM ([choosing models](docs/models.md)).
-- [ ] **Charts:** a suggested chart for each result, chosen from its shape.
+- [x] **Charts:** a bar or line chart for each result that has a chartable shape, drawn from the query's own rows.
 
 ## Project layout
 
