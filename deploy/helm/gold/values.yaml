@@ -23,6 +23,10 @@ sql:
   includeSchema: true
   passDefinitions: true
   maxTokens: 2048
+  extraBody: ""                  # JSON sent with every SQL-model request, e.g. to turn reasoning off
+
+# JSON sent with every orchestrator and agent model request.
+agentExtraBody: ""
 
 # Guardrails on every query.
 governance:

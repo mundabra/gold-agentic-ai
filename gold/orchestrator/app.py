@@ -138,6 +138,7 @@ async def ask(q: Question) -> dict:
         name="GOLD orchestrator",
         instructions=INSTRUCTIONS,
         model=llm.model(config.ORCHESTRATOR_MODEL),
+        model_settings=llm.settings(),
         tools=[make_tool(entry) for entry in registered],
         input_guardrails=[read_only_guardrail] + ([nemo_input_rails] if rails.enabled() else []),
         output_guardrails=[nemo_output_rails] if rails.enabled() and config.RAILS_CHECK_ANSWERS else [],

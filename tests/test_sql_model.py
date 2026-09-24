@@ -30,3 +30,33 @@ def test_tool_names_are_valid_function_names():
     assert tool_name("SQL agent") == "ask_sql_agent"
     assert tool_name("Definitions agent") == "ask_definitions_agent"
     assert tool_name("Forecast Agent (beta)") == "ask_forecast_agent_beta"
+
+
+def test_extra_body_reaches_the_sql_model_request(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    from gold import llm
+
+    sent = {}
+
+    async def fake_create(**kwargs):
+        sent.update(kwargs)
+        usage = SimpleNamespace(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="SELECT 1"))], usage=usage)
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=fake_create)))
+    monkeypatch.setattr(llm, "client", lambda: fake_client)
+    monkeypatch.setattr(config, "SQL_EXTRA_BODY", {"chat_template_kwargs": {"enable_thinking": False}})
+    sql, usage = asyncio.run(sql_model.generate("How many tracks?"))
+    assert sql == "SELECT 1" and usage.total_tokens == 15
+    assert sent["extra_body"] == {"chat_template_kwargs": {"enable_thinking": False}}
+
+
+def test_agent_settings_carry_the_agent_extra_body(monkeypatch):
+    from gold import llm
+
+    monkeypatch.setattr(config, "AGENT_EXTRA_BODY", {"reasoning_effort": "low"})
+    assert llm.settings().extra_body == {"reasoning_effort": "low"}
+    monkeypatch.setattr(config, "AGENT_EXTRA_BODY", {})
+    assert llm.settings().extra_body is None

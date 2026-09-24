@@ -42,6 +42,8 @@ jobs:
           helm template gold deploy/helm/gold --set gateway.enabled=true --set vllm.enabled=true \
             --set scriptedModel.enabled=false --set ingress.enabled=true --set networkPolicy.enabled=true \
             --set guardrails.enabled=true > /dev/null
+          helm lint deploy/helm/gold -f deploy/helm/gold/profiles/nemotron.yaml
+          helm template gold deploy/helm/gold -f deploy/helm/gold/profiles/nemotron.yaml > /dev/null
 
   image:
     runs-on: ubuntu-latest

@@ -48,6 +48,7 @@ async def generate(question: str, definitions: str = "", schema: str = "", model
         messages=messages(question, definitions, schema),
         temperature=0,
         max_tokens=config.SQL_MAX_TOKENS,
+        extra_body=config.SQL_EXTRA_BODY or None,
     )
     u = response.usage
     usage = Usage(

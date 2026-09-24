@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from agents import OpenAIChatCompletionsModel, set_tracing_disabled
+from agents import ModelSettings, OpenAIChatCompletionsModel, set_tracing_disabled
 from openai import AsyncOpenAI
 
 from gold import config
@@ -13,6 +13,11 @@ set_tracing_disabled(not config.OPENAI_TRACING)
 @lru_cache(maxsize=1)
 def client() -> AsyncOpenAI:
     return AsyncOpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY)
+
+
+def settings() -> ModelSettings:
+    """Request settings for the orchestrator and agents (GOLD_AGENT_EXTRA_BODY)."""
+    return ModelSettings(extra_body=config.AGENT_EXTRA_BODY or None)
 
 
 def model(name: str) -> OpenAIChatCompletionsModel:

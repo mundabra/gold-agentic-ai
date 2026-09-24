@@ -13,6 +13,8 @@ data:
   GOLD_SQL_INCLUDE_SCHEMA: {{ .Values.sql.includeSchema | quote }}
   GOLD_SQL_PASS_DEFINITIONS: {{ .Values.sql.passDefinitions | quote }}
   GOLD_SQL_MAX_TOKENS: {{ .Values.sql.maxTokens | int64 | quote }}
+  GOLD_SQL_EXTRA_BODY: {{ .Values.sql.extraBody | quote }}
+  GOLD_AGENT_EXTRA_BODY: {{ .Values.agentExtraBody | quote }}
   GOLD_MAX_ROWS: {{ .Values.governance.maxRows | int64 | quote }}
   GOLD_MAX_QUERY_COST: {{ .Values.governance.maxQueryCost | int64 | quote }}
   GOLD_PII_COLUMNS: {{ .Values.governance.piiColumns | quote }}

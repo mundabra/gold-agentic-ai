@@ -21,6 +21,7 @@ def build_agent(servers: list[MCPServerStreamableHttp]) -> Agent:
         name="Definitions agent",
         instructions=INSTRUCTIONS,
         model=llm.model(config.AGENT_MODEL),
+        model_settings=llm.settings(),
         mcp_servers=servers,
     )
 

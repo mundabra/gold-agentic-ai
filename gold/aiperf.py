@@ -31,6 +31,7 @@ def write_payloads(questions_path: str, out_path: str, model: str | None = None,
                 "max_tokens": config.SQL_MAX_TOKENS,
                 "stream": True,
                 "stream_options": {"include_usage": True},
+                **config.SQL_EXTRA_BODY,  # the same model switches as production
             }) + "\n")
     return len(questions)
 

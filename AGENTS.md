@@ -39,7 +39,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `gold/rails.py`, `deploy/guardrails/` | Optional NVIDIA NeMo Guardrails: the client and the rails configuration |
 | `gold/telemetry.py`, `gold/audit.py` | OpenTelemetry tracing and the audit trail |
 | `deploy/postgres/` | Sample data, glossary, and the read-only role with column grants |
-| `deploy/helm/gold/`, `compose.yaml`, `deploy/litellm/` | Deployment |
+| `deploy/helm/gold/`, `compose.yaml`, `deploy/litellm/` | Deployment (`deploy/helm/gold/profiles/nemotron.yaml`: NVIDIA Nemotron on vLLM) |
 | `evals/` | Evaluation questions with verified reference SQL, and `RESULTS.md` |
 
 ## Rules you must not break
