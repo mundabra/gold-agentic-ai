@@ -31,6 +31,17 @@ governance:
   piiColumns: "email,phone,fax,address"
   openaiTracing: false           # the Agents SDK's trace export to OpenAI stays off unless you opt in
 
+# OpenTelemetry tracing across every GOLD service. Set an OTLP/HTTP endpoint
+# (an OpenTelemetry Collector, Jaeger, Grafana Tempo or your APM) to turn it on.
+tracing:
+  otlpEndpoint: ""               # e.g. http://otel-collector.observability:4318
+  content: false                 # true puts prompts, SQL and results into spans
+
+# Audit trail: one JSON record per question on stdout (collect it with your log pipeline).
+# Optionally also appended to a file, e.g. on a mounted volume.
+audit:
+  logFile: ""
+
 # Shared secret agents need to register with the registry. Leave empty only on a trusted network.
 registry:
   token: ""

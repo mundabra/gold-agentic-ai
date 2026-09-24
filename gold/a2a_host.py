@@ -26,7 +26,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from gold import config, runlog
+from gold import config, runlog, telemetry
 
 log = logging.getLogger("gold.a2a")
 
@@ -125,4 +125,5 @@ def build_app(card: AgentCard, executor: AgentExecutor) -> Starlette:
 
 def serve(card: AgentCard, executor: AgentExecutor) -> None:
     logging.basicConfig(level=logging.INFO)
-    uvicorn.run(build_app(card, executor), host=config.HOST, port=config.PORT)
+    component = card.name.lower().replace(" ", "-")
+    uvicorn.run(telemetry.wrap(build_app(card, executor), component), host=config.HOST, port=config.PORT)

@@ -13,7 +13,7 @@ from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
-from gold import config
+from gold import config, telemetry
 
 TTL_SECONDS = 90
 
@@ -74,7 +74,7 @@ def healthz() -> dict:
 
 
 def main() -> None:
-    uvicorn.run(app, host=config.HOST, port=config.PORT)
+    uvicorn.run(telemetry.wrap(app, "registry"), host=config.HOST, port=config.PORT)
 
 
 if __name__ == "__main__":

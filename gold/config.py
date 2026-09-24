@@ -63,6 +63,13 @@ PUBLIC_URL = env("GOLD_PUBLIC_URL", "http://localhost:8000")
 HOST = env("GOLD_HOST", "0.0.0.0")  # nosec B104 - containers must listen on all interfaces
 PORT = int(env("GOLD_PORT", "8000"))
 
+# Audit trail: every question is logged as JSON to stdout, and appended to this file if set.
+AUDIT_LOG = env("GOLD_AUDIT_LOG", "")
+
+# OpenTelemetry tracing turns on when OTEL_EXPORTER_OTLP_ENDPOINT is set (see gold/telemetry.py).
+# Prompts, SQL and results stay out of spans unless this is true.
+TRACE_CONTENT = env_bool("GOLD_TRACE_CONTENT", False)
+
 # The Agents SDK sends traces to OpenAI by default. GOLD keeps them in your
 # environment unless you opt in.
 OPENAI_TRACING = env_bool("GOLD_OPENAI_TRACING", False)

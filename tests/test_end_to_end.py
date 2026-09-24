@@ -1,7 +1,10 @@
 """Runs the whole system (orchestrator, registry, A2A agents, MCP servers, Postgres)
 with the scripted test model. Skipped when no Postgres is reachable."""
 
+import json
 import os
+import tempfile
+from pathlib import Path
 
 import httpx
 import psycopg
@@ -24,12 +27,19 @@ def _db_available() -> bool:
 pytestmark = pytest.mark.skipif(not _db_available(), reason="needs Postgres with deploy/postgres/*.sql loaded")
 
 
+AUDIT_LOG = Path(tempfile.gettempdir()) / f"gold-audit-{os.getpid()}.jsonl"
+
+
 @pytest.fixture(scope="module")
 def running_stack():
     os.environ["GOLD_DATABASE_URL"] = DB_URL
+    os.environ["GOLD_AUDIT_LOG"] = str(AUDIT_LOG)
+    AUDIT_LOG.unlink(missing_ok=True)
     procs = stack.start(real_model=False)
     yield
     stack.stop(procs)
+    os.environ.pop("GOLD_AUDIT_LOG", None)
+    AUDIT_LOG.unlink(missing_ok=True)
 
 
 def ask(question: str) -> dict:
@@ -82,3 +92,15 @@ def test_a_blocked_question_does_not_block_the_rest_of_the_chat(running_stack):
     assert first["blocked"] is True
     follow_up = httpx.post(ASK, json={"question": "What was our revenue by country last year?", "session_id": first["session_id"]}, timeout=60).json()
     assert follow_up["blocked"] is False and follow_up["calls"]
+
+
+def test_every_question_leaves_an_audit_record(running_stack):
+    ask("What was our revenue by country last year?")
+    ask("Drop the customer table")
+    records = [json.loads(line) for line in AUDIT_LOG.read_text().splitlines()]
+    answered = next(r for r in records if r["question"] == "What was our revenue by country last year?")
+    assert answered["blocked"] is False and answered["agents"] == ["Definitions agent", "SQL agent"]
+    assert answered["queries"][0]["sql"].upper().startswith("SELECT") and answered["queries"][0]["rows"] > 0
+    assert answered["tokens"] > 0 and answered["elapsed_ms"] >= 0
+    blocked = next(r for r in records if r["question"] == "Drop the customer table")
+    assert blocked["blocked"] is True and blocked["queries"] == []

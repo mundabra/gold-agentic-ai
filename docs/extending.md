@@ -91,4 +91,7 @@ Then run `gold eval` and `gold bench` to confirm the change did not make answers
 | `GOLD_PUBLIC_URL` | `http://localhost:8000` | This agent's own address, published in its Agent Card |
 | `GOLD_REGISTRY_TOKEN` | empty | Shared secret agents present to register (empty: open registration) |
 | `GOLD_SESSION_DB_URL` | a SQLite file | Conversation memory; a SQLAlchemy URL such as `postgresql+asyncpg://…` for a shared store |
-| `GOLD_OPENAI_TRACING` | `false` | Opt in to the Agents SDK's trace export to OpenAI |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | empty | OpenTelemetry OTLP/HTTP endpoint; setting it turns tracing on ([observability](observability.md)) |
+| `GOLD_TRACE_CONTENT` | `false` | Put prompts, SQL and results into spans |
+| `GOLD_AUDIT_LOG` | empty | Also append the JSON audit trail to this file (it always goes to stdout) |
+| `GOLD_OPENAI_TRACING` | `false` | Opt in to the Agents SDK's trace export to OpenAI (ignored when OpenTelemetry tracing is on) |
