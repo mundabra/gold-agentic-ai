@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 450" width="1100" height="450" role="img" aria-label="GOLD architecture: a business user asks the orchestrator, which finds agents in a registry and calls the Definitions agent and the SQL agent over A2A. They use MCP tool servers backed by Postgres through a read-only login. Every model call goes through the LiteLLM gateway to your models.">
+  <style>
+    text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1F22; }
+    .t { font-size: 17px; font-weight: 600; }
+    .s { font-size: 13px; fill: #5B6168; }
+    .l { font-size: 12px; font-weight: 600; fill: #9A6B12; }
+    .w { fill: #FFFFFF; }
+    .box { fill: #FFFFFF; stroke: #C9CEC9; stroke-width: 1.4; }
+    .gold { fill: #F6EEDC; stroke: #9A6B12; stroke-width: 1.6; }
+    .line { fill: none; stroke: #6B7178; stroke-width: 1.6; }
+    .dash { fill: none; stroke: #9A6B12; stroke-width: 1.6; stroke-dasharray: 6 5; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B7178"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9A6B12"/></marker>
+  </defs>
+  <rect width="1100" height="450" rx="14" fill="#FFFFFF"/>
+
+  <!-- user -->
+  <rect x="20" y="176" width="134" height="48" rx="24" class="box"/>
+  <text x="87" y="206" class="t" text-anchor="middle" style="font-size:15px">Business user</text>
+  <path d="M154,200 H188" class="line" marker-end="url(#a)"/>
+
+  <!-- registry -->
+  <rect x="198" y="26" width="184" height="58" rx="10" class="box"/>
+  <text x="290" y="51" class="t" text-anchor="middle" style="font-size:15px">Registry</text>
+  <text x="290" y="71" class="s" text-anchor="middle">A2A Agent Cards</text>
+  <path d="M290,148 V86" class="line" stroke-dasharray="4 4" marker-end="url(#a)"/>
+  <text x="298" y="122" class="s">finds agents</text>
+
+  <!-- orchestrator -->
+  <rect x="190" y="148" width="200" height="104" rx="12" class="gold"/>
+  <text x="290" y="182" class="t" text-anchor="middle">Orchestrator</text>
+  <text x="290" y="206" class="s" text-anchor="middle">chat UI · API</text>
+  <text x="290" y="226" class="s" text-anchor="middle">guardrail · memory</text>
+
+  <!-- agents -->
+  <path d="M390,176 L448,118" class="line" marker-end="url(#a)"/>
+  <path d="M390,224 L448,282" class="line" marker-end="url(#a)"/>
+  <text x="400" y="140" class="l">A2A</text>
+  <text x="400" y="272" class="l">A2A</text>
+  <rect x="450" y="80" width="210" height="68" rx="12" class="gold"/>
+  <text x="555" y="109" class="t" text-anchor="middle">Definitions agent</text>
+  <text x="555" y="131" class="s" text-anchor="middle">agreed business terms</text>
+  <rect x="450" y="252" width="210" height="68" rx="12" class="gold"/>
+  <text x="555" y="281" class="t" text-anchor="middle">SQL agent</text>
+  <text x="555" y="303" class="s" text-anchor="middle">one read-only query</text>
+
+  <!-- tools -->
+  <path d="M660,114 H718" class="line" marker-end="url(#a)"/>
+  <path d="M660,286 H718" class="line" marker-end="url(#a)"/>
+  <text x="673" y="106" class="l">MCP</text>
+  <text x="673" y="278" class="l">MCP</text>
+  <rect x="720" y="80" width="212" height="68" rx="12" class="box"/>
+  <text x="826" y="109" class="t" text-anchor="middle">Glossary tools</text>
+  <text x="826" y="131" class="s" text-anchor="middle">search_glossary</text>
+  <rect x="720" y="252" width="212" height="68" rx="12" class="box"/>
+  <text x="826" y="281" class="t" text-anchor="middle">Data tools</text>
+  <text x="826" y="303" class="s" text-anchor="middle">SQLGlot · dry run · run_sql</text>
+
+  <!-- database -->
+  <path d="M932,114 C955,114 960,160 978,172" class="line" marker-end="url(#a)"/>
+  <path d="M932,286 C955,286 960,240 978,230" class="line" marker-end="url(#a)"/>
+  <path d="M980,160 v80 a55,14 0 0 0 110,0 v-80" class="box"/>
+  <ellipse cx="1035" cy="160" rx="55" ry="14" class="box"/>
+  <text x="1035" y="204" class="t" text-anchor="middle" style="font-size:15px">Postgres</text>
+  <text x="1035" y="224" class="s" text-anchor="middle">read-only login</text>
+
+  <!-- gateway -->
+  <path d="M290,252 V366" class="dash" marker-end="url(#g)"/>
+  <path d="M555,320 V366" class="dash" marker-end="url(#g)"/>
+  <path d="M660,132 C690,132 690,300 680,340 L660,366" class="dash" marker-end="url(#g)"/>
+  <text x="300" y="316" class="l">every model call</text>
+  <rect x="190" y="368" width="470" height="58" rx="12" fill="#9A6B12"/>
+  <text x="425" y="394" class="t w" text-anchor="middle" style="fill:#FFFFFF">LiteLLM gateway</text>
+  <text x="425" y="414" class="s" text-anchor="middle" style="fill:#F6EEDC">one OpenAI-compatible endpoint · gold-general, gold-sql</text>
+  <path d="M660,397 H718" class="line" marker-end="url(#a)"/>
+  <rect x="720" y="368" width="370" height="58" rx="12" class="box"/>
+  <text x="905" y="394" class="t" text-anchor="middle">Your models</text>
+  <text x="905" y="414" class="s" text-anchor="middle">hosted API · fine-tuned · vLLM on your GPUs</text>
+</svg>

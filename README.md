@@ -49,18 +49,7 @@ Without definitions, every miss was about business meaning, not SQL syntax: "las
 
 **Three agents, two tool servers and a registry**, connected by open standards. Every model call goes through one gateway:
 
-```mermaid
-flowchart LR
-    U([Business user]) --> O["<b>Orchestrator</b><br/>chat UI · API · guardrail"]
-    O -->|A2A| D["<b>Definitions agent</b>"]
-    O -->|A2A| S["<b>SQL agent</b>"]
-    O -. finds agents .- R[("Registry")]
-    D -->|MCP| T["<b>Tool servers</b><br/>glossary · schema · run_sql"]
-    S -->|MCP| T
-    T --> DB[("<b>Postgres</b><br/>read-only login")]
-    O & D & S ==> GW["<b>LiteLLM gateway</b><br/>one OpenAI-compatible endpoint"]
-    GW ==> MODELS(["Your models"])
-```
+![GOLD architecture: the orchestrator finds agents in a registry and calls the Definitions agent and SQL agent over A2A; they use MCP tool servers on Postgres through a read-only login; every model call goes through the LiteLLM gateway](docs/images/architecture.svg)
 
 | Component | What it does |
 |---|---|
@@ -82,13 +71,9 @@ flowchart LR
 
 GOLD never names a real model. It only asks for two roles, `gold-general` (tool calling for the orchestrator and agents) and `gold-sql` (writing SQL). The [LiteLLM](https://docs.litellm.ai) gateway decides which model answers each role, so you can mix providers, run a small fine-tuned model next to a large general one, and move to your own GPUs one role at a time:
 
-```mermaid
-flowchart LR
-    A["GOLD agents"] -->|gold-general| GW{{"LiteLLM gateway<br/>routes each role to a model"}}
-    A -->|gold-sql| GW
-    GW -->|gold-general| G["Tool-calling model<br/>hosted API, later vLLM on your GPUs"]
-    GW -->|gold-sql| Q["SQL model<br/>hosted API, then your fine-tuned model"]
-```
+![GOLD asks the LiteLLM gateway for two roles; each role maps to a hosted model in stage 1 and to your own models by stage 3](docs/images/model-gateway.svg)
+
+<sub>Highlighted boxes are models you own. Each role moves on its own schedule.</sub>
 
 | GOLD asks for | Stage 1: API | Stage 2: fine-tune | Stage 3: own inference |
 |---|---|---|---|
