@@ -59,7 +59,7 @@ Every response also carries a trace (agents called, tools used, SQL run, tokens,
 
 | Step | Control |
 |---|---|
-| Question arrives | Guardrail refuses requests to change data. No model is called and no tokens are spent. |
+| Question arrives | Guardrail refuses requests to change data. No model is called and no tokens are spent. Optional NeMo Guardrails input rails check for jailbreaks, off-topic requests and personal data. |
 | Before SQL is written | Business terms are resolved from the glossary, not guessed by the model. |
 | Before a query runs | SQLGlot parses it: exactly one read-only query, with no DML, DDL, `INTO`, locks, transaction control or admin functions anywhere in the tree. The planner's cost estimate is checked. |
 | While it runs | Single-statement execution, read-only transaction, 10-second timeout, and a database login with SELECT rights on permitted columns only. Personal-data columns can't be read at all. |

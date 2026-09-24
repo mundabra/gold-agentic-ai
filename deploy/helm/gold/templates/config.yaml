@@ -21,6 +21,12 @@ data:
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.tracing.otlpEndpoint | quote }}
   GOLD_TRACE_CONTENT: {{ .Values.tracing.content | quote }}
   GOLD_AUDIT_LOG: {{ .Values.audit.logFile | quote }}
+  {{- if .Values.guardrails.enabled }}
+  GOLD_RAILS_URL: "http://{{ $name }}-guardrails:8000"
+  GOLD_RAILS_MODEL: {{ .Values.guardrails.model | quote }}
+  GOLD_RAILS_CHECK_ANSWERS: {{ .Values.guardrails.checkAnswers | quote }}
+  GOLD_RAILS_FAIL_OPEN: {{ .Values.guardrails.failOpen | quote }}
+  {{- end }}
   GOLD_REGISTRY_URL: "http://{{ $name }}-registry:8000"
   GOLD_DATA_MCP_URL: "http://{{ $name }}-mcp-data:8000/mcp"
   GOLD_GLOSSARY_MCP_URL: "http://{{ $name }}-mcp-glossary:8000/mcp"

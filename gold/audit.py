@@ -29,7 +29,8 @@ def _trace_id() -> str | None:
 
 
 def record(*, session_id: str, question: str, blocked: bool, calls: list[dict], usage: dict,
-           elapsed_ms: int, user: str | None = None, error: str | None = None) -> dict:
+           elapsed_ms: int, user: str | None = None, error: str | None = None,
+           blocked_by: str | None = None) -> dict:
     queries = [
         {
             "sql": (step.get("input") or {}).get("sql"),
@@ -45,6 +46,7 @@ def record(*, session_id: str, question: str, blocked: bool, calls: list[dict], 
         "user": user,
         "question": question,
         "blocked": blocked,
+        "blocked_by": blocked_by,
         "error": error,
         "agents": [c.get("agent") for c in calls],
         "queries": queries,

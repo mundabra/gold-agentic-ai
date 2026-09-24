@@ -31,16 +31,21 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: helm version   # preinstalled on GitHub's Ubuntu runners
-      - name: Chart files match the SQL the database loads
-        run: diff -r deploy/postgres deploy/helm/gold/files/postgres
+      - name: Chart files match the SQL and rails the services load
+        run: |
+          diff -r deploy/postgres deploy/helm/gold/files/postgres
+          diff deploy/guardrails/gold/config.yml deploy/helm/gold/files/guardrails/config.yml
+          diff deploy/guardrails/gold/prompts.yml deploy/helm/gold/files/guardrails/prompts.yml
       - run: helm lint deploy/helm/gold
       - run: |
           helm template gold deploy/helm/gold > /dev/null
           helm template gold deploy/helm/gold --set gateway.enabled=true --set vllm.enabled=true \
-            --set scriptedModel.enabled=false --set ingress.enabled=true --set networkPolicy.enabled=true > /dev/null
+            --set scriptedModel.enabled=false --set ingress.enabled=true --set networkPolicy.enabled=true \
+            --set guardrails.enabled=true > /dev/null
 
   image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - run: docker build -t gold:ci .
+      - run: docker build -t gold-guardrails:ci deploy/guardrails

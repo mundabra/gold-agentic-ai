@@ -40,3 +40,15 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=GOLD: Governed Open Language-to-Data
             org.opencontainers.image.licenses=Apache-2.0
+      - uses: docker/build-push-action@v6
+        with:
+          context: deploy/guardrails
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}-guardrails:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.image }}-guardrails:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=NVIDIA NeMo Guardrails server with GOLD's rails
+            org.opencontainers.image.licenses=Apache-2.0

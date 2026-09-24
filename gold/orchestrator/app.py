@@ -11,15 +11,17 @@ from agents import (
     Agent,
     GuardrailFunctionOutput,
     InputGuardrailTripwireTriggered,
+    OutputGuardrailTripwireTriggered,
     RunContextWrapper,
     Runner,
     input_guardrail,
+    output_guardrail,
 )
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from gold import audit, config, llm, runlog, sessions, telemetry
+from gold import audit, config, llm, rails, runlog, sessions, telemetry
 from gold.orchestrator.a2a_tools import discover, make_tool
 
 log = logging.getLogger("gold.orchestrator")
@@ -40,6 +42,8 @@ If a specialist is unavailable or fails, say so plainly.
 GOLD is read-only: never offer to change data."""
 
 REFUSAL = "GOLD is read-only, so I can't change or delete data. I can answer questions about it."
+RAILS_REFUSAL = "I can't help with that request. I answer questions about the company's business data."
+RAILS_ANSWER_WITHHELD = "The answer was withheld by the safety checks. Try rephrasing the question."
 
 _WRITE_INTENT = re.compile(
     r"\b(delete|drop|truncate|insert|alter|wipe|erase|purge)\b"
@@ -66,7 +70,30 @@ def _latest_user_text(user_input) -> str:
 async def read_only_guardrail(_ctx: RunContextWrapper, _agent: Agent, user_input) -> GuardrailFunctionOutput:
     """Stop requests to change data before any model is called."""
     hit = _WRITE_INTENT.search(_latest_user_text(user_input))
-    return GuardrailFunctionOutput(output_info={"matched": hit.group(0) if hit else None}, tripwire_triggered=bool(hit))
+    return GuardrailFunctionOutput(
+        output_info={"blocked_by": "read-only guardrail", "matched": hit.group(0) if hit else None},
+        tripwire_triggered=bool(hit),
+    )
+
+
+@input_guardrail(run_in_parallel=False)
+async def nemo_input_rails(_ctx: RunContextWrapper, _agent: Agent, user_input) -> GuardrailFunctionOutput:
+    """NVIDIA NeMo Guardrails input rails (optional): jailbreaks, off-topic requests, personal data."""
+    result = await rails.check([{"role": "user", "content": _latest_user_text(user_input)}], "input")
+    return GuardrailFunctionOutput(
+        output_info={"blocked_by": f"NeMo Guardrails: {result['rail']}"}, tripwire_triggered=result["blocked"]
+    )
+
+
+@output_guardrail
+async def nemo_output_rails(ctx: RunContextWrapper, _agent: Agent, output) -> GuardrailFunctionOutput:
+    """NVIDIA NeMo Guardrails output rails (optional): nothing leaves that the policy forbids."""
+    question = ctx.context.get("question", "") if isinstance(ctx.context, dict) else ""
+    messages = [{"role": "user", "content": question}, {"role": "assistant", "content": str(output)}]
+    result = await rails.check(messages, "output")
+    return GuardrailFunctionOutput(
+        output_info={"blocked_by": f"NeMo Guardrails: {result['rail']}"}, tripwire_triggered=result["blocked"]
+    )
 
 
 class Question(BaseModel):
@@ -112,20 +139,29 @@ async def ask(q: Question) -> dict:
         instructions=INSTRUCTIONS,
         model=llm.model(config.ORCHESTRATOR_MODEL),
         tools=[make_tool(entry) for entry in registered],
-        input_guardrails=[read_only_guardrail],
+        input_guardrails=[read_only_guardrail] + ([nemo_input_rails] if rails.enabled() else []),
+        output_guardrails=[nemo_output_rails] if rails.enabled() and config.RAILS_CHECK_ANSWERS else [],
     )
-    context: dict = {"calls": []}
+    context: dict = {"calls": [], "question": question}
     try:
         result = await Runner.run(agent, question, context=context, session=session, max_turns=10)
-    except InputGuardrailTripwireTriggered:
+    except (InputGuardrailTripwireTriggered, OutputGuardrailTripwireTriggered) as tripped:
         elapsed = round((time.perf_counter() - started) * 1000)
-        audit.record(session_id=session_id, question=question, blocked=True, calls=[], usage={}, elapsed_ms=elapsed)
+        blocked_by = (tripped.guardrail_result.output.output_info or {}).get("blocked_by", "guardrail")
+        if isinstance(tripped, OutputGuardrailTripwireTriggered):
+            answer = RAILS_ANSWER_WITHHELD
+        else:
+            answer = REFUSAL if blocked_by == "read-only guardrail" else RAILS_REFUSAL
+        calls = context["calls"] if isinstance(tripped, OutputGuardrailTripwireTriggered) else []
+        audit.record(session_id=session_id, question=question, blocked=True, calls=calls, usage={},
+                     elapsed_ms=elapsed, blocked_by=blocked_by)
         return {
-            "answer": REFUSAL,
+            "answer": answer,
             "blocked": True,
+            "blocked_by": blocked_by,
             "session_id": session_id,
             "agents": [a["name"] for a in registered],
-            "calls": [],
+            "calls": calls,
             "usage": {},
             "elapsed_ms": elapsed,
         }

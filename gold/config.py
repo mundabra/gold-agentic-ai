@@ -63,6 +63,14 @@ PUBLIC_URL = env("GOLD_PUBLIC_URL", "http://localhost:8000")
 HOST = env("GOLD_HOST", "0.0.0.0")  # nosec B104 - containers must listen on all interfaces
 PORT = int(env("GOLD_PORT", "8000"))
 
+# Optional NVIDIA NeMo Guardrails server (see gold/rails.py and docs/guardrails.md).
+RAILS_URL = env("GOLD_RAILS_URL", "")
+RAILS_CONFIG_ID = env("GOLD_RAILS_CONFIG_ID", "gold")
+RAILS_MODEL = env("GOLD_RAILS_MODEL", "gold-general")  # the model the self-check rails use
+RAILS_CHECK_ANSWERS = env_bool("GOLD_RAILS_CHECK_ANSWERS", False)
+RAILS_FAIL_OPEN = env_bool("GOLD_RAILS_FAIL_OPEN", False)
+RAILS_TIMEOUT = float(env("GOLD_RAILS_TIMEOUT", "20"))
+
 # Audit trail: every question is logged as JSON to stdout, and appended to this file if set.
 AUDIT_LOG = env("GOLD_AUDIT_LOG", "")
 

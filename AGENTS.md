@@ -36,6 +36,8 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `gold/evaluate.py`, `bench.py`, `dataset.py`, `aiperf.py`, `cli.py` | `gold eval`, `gold bench`, `gold dataset`, AIPerf payloads and summaries, the CLI |
 | `scripts/aiperf.sh` | Serving benchmark with NVIDIA AIPerf, using the production SQL requests |
 | `gold/config.py` | Every setting, read from `GOLD_*` environment variables |
+| `gold/rails.py`, `deploy/guardrails/` | Optional NVIDIA NeMo Guardrails: the client and the rails configuration |
+| `gold/telemetry.py`, `gold/audit.py` | OpenTelemetry tracing and the audit trail |
 | `deploy/postgres/` | Sample data, glossary, and the read-only role with column grants |
 | `deploy/helm/gold/`, `compose.yaml`, `deploy/litellm/` | Deployment |
 | `evals/` | Evaluation questions with verified reference SQL, and `RESULTS.md` |
@@ -48,7 +50,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 4. **The SQL prompt contract is load-bearing.** Changing `gold/sql_model.py` changes what a fine-tuned model sees. Say so in the pull request and re-run `gold eval`.
 5. **The evaluation set is held out.** Never add `evals/questions.jsonl` questions to training data, and never edit reference SQL to make a model pass.
 6. **Report only measured numbers.** Anything in `evals/RESULTS.md`, `evals/PERFORMANCE.md` or the README must come from a real `gold eval`, `gold bench` or `scripts/aiperf.sh` run, with its caveats.
-7. **Keep the two copies of the database scripts identical:** `deploy/postgres/` and `deploy/helm/gold/files/postgres/`.
+7. **Keep the chart's copies identical to the originals:** `deploy/postgres/` ↔ `deploy/helm/gold/files/postgres/`, and `deploy/guardrails/gold/*.yml` ↔ `deploy/helm/gold/files/guardrails/`.
 8. **Settings are environment variables.** Add new ones to `gold/config.py`, `compose.yaml`, the Helm chart (`values.yaml` and `templates/config.yaml`) and the settings table in `docs/extending.md`, all in the same change.
 
 ## Common changes

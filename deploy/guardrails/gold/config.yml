@@ -1,0 +1,49 @@
+# NVIDIA NeMo Guardrails configuration for GOLD (config id: "gold").
+# GOLD calls the guardrails server's /v1/checks endpoint on each question
+# (input rails) and, if GOLD_RAILS_CHECK_ANSWERS=true, on each answer (output rails).
+# See docs/guardrails.md.
+
+# The model used by the self-check rails. It speaks the OpenAI API, so it can be the
+# LiteLLM gateway (gold-general), a vLLM or NIM server, or any hosted API.
+# The key is read from the OPENAI_API_KEY environment variable of the guardrails server.
+models:
+  - type: main
+    engine: openai
+    model: gold-general
+    parameters:
+      base_url: http://litellm:4000/v1
+      temperature: 0
+
+rails:
+  input:
+    flows:
+      - regex check input        # no model needed: known prompt-injection and data-exfiltration phrasings
+      - self check input         # a model checks the question against the policy in prompts.yml
+      # Add NVIDIA NemoGuard models for stronger checks, for example:
+      # - content safety check input $model=content_safety
+      # - jailbreak detection model
+  output:
+    flows:
+      - regex check output       # no personal data in answers, even if the other layers missed it
+      - self check output
+
+  config:
+    regex_detection:
+      input:
+        case_insensitive: true
+        patterns:
+          - "ignore (all |any )?(previous|prior|above) (instructions|rules)"
+          - "(reveal|show|print|repeat) (your|the) (system )?(prompt|instructions)"
+          - "(list|give|show|export|dump) .*(e-?mails?|phone numbers?|home addresses|street addresses)"
+          - "you are (now )?(dan|developer mode)"
+      output:
+        patterns:
+          - "[\\w.+-]+@[\\w-]+\\.[\\w.-]+"            # an email address
+          - "\\+\\d[\\d\\s().-]{6,}\\d"               # an international phone number
+
+  # Uncomment with the content safety rail above, pointing at a NemoGuard model you serve:
+  # models:
+  #   - type: content_safety
+  #     engine: nim
+  #     model: nvidia/llama-3.1-nemoguard-8b-content-safety
+  #     parameters: {base_url: http://nemoguard-content-safety:8000/v1}

@@ -132,9 +132,10 @@ SQL_MODEL=openai/gold-sql               # "openai/" = any OpenAI-compatible serv
 | One meaning per term | Definitions live in a glossary table with an owner per term. Agents quote them word for word. |
 | Auditable answers | Each response carries the definitions, the SQL that actually ran, the agents and tools called, tokens and time. Every question, answered or blocked, also leaves a JSON audit record. |
 | Traced end to end | Set one OpenTelemetry endpoint and each question becomes a single trace across the orchestrator, agents, tool servers, database and model calls, with prompts and results kept out of spans by default ([observability](docs/observability.md)). |
+| Safety rails (optional) | NVIDIA NeMo Guardrails checks every question (and optionally every answer) for jailbreaks, off-topic requests and personal data before any agent runs ([guardrails](docs/guardrails.md)). |
 | Your data stays yours | No component sends data anywhere except the model endpoint you configure. The Agents SDK's trace export is off. In stage 1 the schema, question and results go to your hosted model provider. |
 
-Known limits are listed honestly in [production.md](docs/production.md#known-limits), for example that names are readable by design and the guardrail is a keyword filter backed by the database rules.
+Known limits are listed honestly in [production.md](docs/production.md#known-limits), for example that names are readable by design and that model-based rails are best effort, which is why the database rules come first.
 
 ## Make it yours
 
@@ -165,7 +166,7 @@ Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; t
 - [ ] **User identity and row-level security:** sign-in at the orchestrator; the user's identity travels to the database, where row-level policies decide what they can see.
 - [ ] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI.
 - [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
-- [ ] **NVIDIA NeMo Guardrails (optional):** jailbreak, topic, PII and SQL-injection rails around the model calls.
+- [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).
 - [ ] **NVIDIA Nemotron profiles:** ready-made Helm values for serving Nemotron models with vLLM, one for each GOLD role.
 - [ ] **Charts:** a suggested chart for each result, chosen from its shape.
 

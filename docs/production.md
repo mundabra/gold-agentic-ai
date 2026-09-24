@@ -12,6 +12,7 @@ GOLD is a reference architecture: the controls below are built in and tested, an
 | Containers | Non-root user, read-only root filesystem, all capabilities dropped, health checks on every service. |
 | Secrets | Each Kubernetes Deployment receives only the secrets it uses. `llm.existingSecret` and `database.existingSecret` keep keys out of Helm values. |
 | Network | Optional NetworkPolicies (`networkPolicy.enabled`) allow only the connections GOLD needs. Compose publishes ports on 127.0.0.1 only. |
+| Safety rails | Optional NVIDIA NeMo Guardrails on every question and answer, failing closed ([guardrails](guardrails.md)). |
 | Registry | Optional shared token (`GOLD_REGISTRY_TOKEN`) for registration. A live agent's name can't be taken over by another service. |
 | Memory | Conversation history in a SQLite file, or a shared database (`GOLD_SESSION_DB_URL`) for more than one orchestrator replica. |
 | Tracing | OpenTelemetry traces across every service, one trace per question; prompts and results kept out of spans by default ([observability](observability.md)). |
@@ -34,7 +35,7 @@ GOLD is a reference architecture: the controls below are built in and tested, an
 ## Known limits
 
 - **Names are readable by design.** Customer and employee names are needed for questions like "top customers". Remove those grants if your policy requires it.
-- **The input guardrail is a keyword filter.** It exists to stop obvious write requests early and cheaply. The guarantee comes from the database permissions, not from the filter.
+- **The built-in input guardrail is a keyword filter, and model-based rails are best effort.** They stop obvious misuse early and cheaply. The guarantee comes from the database permissions, not from any filter or rail.
 - **The answer text is written by the orchestrator model.** It quotes the SQL and definitions, but the authoritative record is the audit trail and the trace, which hold the exact query that ran.
 - **Free-text scrubbing is pattern-based.** It catches emails and international phone formats. Keep personal data out through column grants, not scrubbing.
 - **The registry keeps state in memory.** Agents re-register every 30 seconds, so it recovers from restarts. Run one replica.
