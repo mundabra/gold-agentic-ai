@@ -26,7 +26,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from gold import __version__, config, runlog, telemetry
+from gold import __version__, config, identity, runlog, telemetry
 
 log = logging.getLogger("gold.a2a")
 
@@ -41,12 +41,13 @@ class AgentsSdkExecutor(AgentExecutor):
         self.mcp_urls = mcp_urls
         self.max_turns = max_turns
 
-    async def run(self, text: str) -> tuple[str, dict]:
+    async def run(self, text: str, user_token: str | None = None) -> tuple[str, dict]:
+        headers = {identity.HEADER: user_token} if user_token else {}
         async with AsyncExitStack() as stack:
             servers = []
             for name, url in self.mcp_urls.items():
                 server = MCPServerStreamableHttp(
-                    params={"url": url, "timeout": 30},
+                    params={"url": url, "timeout": 30, "headers": headers},
                     name=name,
                     cache_tools_list=True,
                     client_session_timeout_seconds=30,
@@ -64,7 +65,9 @@ class AgentsSdkExecutor(AgentExecutor):
         updater = TaskUpdater(event_queue=event_queue, task_id=task.id, context_id=task.context_id)
         await updater.start_work()
         try:
-            answer, trace = await self.run(get_message_text(context.message))
+            metadata = context.message.metadata
+            token = metadata[identity.METADATA_KEY] if identity.METADATA_KEY in metadata else None
+            answer, trace = await self.run(get_message_text(context.message), token)
         except Exception as exc:
             log.exception("agent run failed")
             await updater.failed(new_text_message(f"The agent failed: {exc}"))

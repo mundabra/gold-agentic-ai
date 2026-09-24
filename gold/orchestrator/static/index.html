@@ -48,6 +48,8 @@
   .brand b { font-size: 20px; letter-spacing: 0.14em; color: var(--gold); }
   .brand span { color: var(--muted); font-size: 13px; }
   .agents { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+  .who { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .who select { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 6px; }
   .chip { border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
   .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
   .chip.off i { background: var(--bad); }
@@ -108,6 +110,7 @@
 <header>
   <div class="brand"><b>GOLD</b><span>Ask in plain language. Get the governed number.</span></div>
   <div class="agents" id="agents" aria-live="polite"></div>
+  <div class="who" id="who"></div>
 </header>
 <main>
   <section class="chat">
@@ -139,6 +142,7 @@ const EXAMPLES = [
 ];
 const $ = (id) => document.getElementById(id);
 let sessionId = null;
+let demoUser = null;  // demo mode only: whose view of the data to show
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -233,7 +237,7 @@ async function ask(question) {
   try {
     const res = await fetch("api/ask", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign({ "Content-Type": "application/json" }, demoUser ? { "X-Gold-Demo-User": demoUser } : {}),
       body: JSON.stringify({ question, session_id: sessionId }),
     });
     const body = await res.json();
@@ -262,6 +266,22 @@ async function loadAgents() {
     $("agents").innerHTML = `<span class="chip off"><i></i>Registry unreachable</span>`;
   }
 }
+
+async function loadIdentity() {
+  try {
+    const res = await fetch("api/identity");
+    const who = await res.json();
+    if (who.mode === "demo" && who.demo_users.length) {
+      demoUser = who.demo_users[0];
+      $("who").innerHTML = `<label for="viewas">View as</label><select id="viewas">${who.demo_users
+        .map((u) => `<option>${esc(u)}</option>`).join("")}</select>`;
+      $("viewas").addEventListener("change", (e) => { demoUser = e.target.value; sessionId = null; });
+    } else if (who.user) {
+      $("who").textContent = `Signed in as ${who.user}`;
+    }
+  } catch { /* identity is optional */ }
+}
+loadIdentity();
 
 $("examples").innerHTML = EXAMPLES.map((e) => `<button type="button">${esc(e)}</button>`).join("");
 $("examples").addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") ask(e.target.textContent); });

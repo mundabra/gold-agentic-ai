@@ -31,6 +31,9 @@ REVOKE EXECUTE ON FUNCTION pg_terminate_backend(integer, bigint), pg_cancel_back
     pg_advisory_lock(bigint), pg_notify(text, text), set_config(text, text, boolean)
     FROM PUBLIC;
 
+-- Row-level security (03-row-level-security.sql) decides which rows each user sees.
+-- gold_user_access holds entitlements, so GOLD's login gets no rights on it.
+
 ALTER ROLE gold_reader SET default_transaction_read_only = on;
 ALTER ROLE gold_reader SET statement_timeout = '10s';
 SQL

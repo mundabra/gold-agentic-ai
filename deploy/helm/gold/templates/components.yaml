@@ -53,6 +53,10 @@ spec:
             - name: GOLD_GLOSSARY_DATABASE_URL
               valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: glossaryUrl, optional: true } }
             {{- end }}
+            {{- if has $component (list "orchestrator" "sql-agent" "definitions-agent" "mcp-data") }}
+            - name: GOLD_IDENTITY_SECRET
+              valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" $root }}, key: identitySecret, optional: true } }
+            {{- end }}
             {{- if has $component $needsRegistry }}
             - name: GOLD_REGISTRY_TOKEN
               valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" $root }}, key: registryToken, optional: true } }

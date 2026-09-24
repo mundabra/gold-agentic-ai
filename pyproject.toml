@@ -18,6 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Sign-in with OIDC bearer tokens (GOLD_AUTH_MODE=oidc).
+auth = ["pyjwt[crypto]>=2.8"]
 # OpenTelemetry tracing across every service (on when OTEL_EXPORTER_OTLP_ENDPOINT is set).
 otel = [
     "opentelemetry-sdk>=1.30",

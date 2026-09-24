@@ -17,11 +17,11 @@ from agents import (
     input_guardrail,
     output_guardrail,
 )
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from gold import audit, config, llm, rails, runlog, sessions, telemetry
+from gold import audit, config, identity, llm, rails, runlog, sessions, telemetry
 from gold.orchestrator.a2a_tools import discover, make_tool
 
 log = logging.getLogger("gold.orchestrator")
@@ -115,18 +115,39 @@ def healthz() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/api/identity")
+def whoami(request: Request) -> dict:
+    """The signed-in user as GOLD sees them, and (in demo mode) the users to pick from."""
+    try:
+        user = identity.from_request(request.headers)
+    except identity.AuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    return {
+        "mode": config.AUTH_MODE,
+        "user": user.id if user else None,
+        "demo_users": config.DEMO_USERS if config.AUTH_MODE == "demo" else [],
+    }
+
+
 @app.get("/api/agents")
 async def agents() -> list[dict]:
     return await discover()
 
 
 @app.post("/api/ask")
-async def ask(q: Question) -> dict:
+async def ask(q: Question, request: Request) -> dict:
     question = q.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Ask a question.")
+    try:
+        user = identity.from_request(request.headers)
+    except identity.AuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    if user is None and config.REQUIRE_IDENTITY:
+        raise HTTPException(status_code=401, detail="Sign in to ask questions.")
     session_id = q.session_id or uuid.uuid4().hex
-    session = sessions.get(session_id)
+    # Conversations are private to their user: the same session id can't read someone else's.
+    session = sessions.get(f"{user.id}:{session_id}" if user else session_id)
     started = time.perf_counter()
 
     try:
@@ -143,7 +164,7 @@ async def ask(q: Question) -> dict:
         input_guardrails=[read_only_guardrail] + ([nemo_input_rails] if rails.enabled() else []),
         output_guardrails=[nemo_output_rails] if rails.enabled() and config.RAILS_CHECK_ANSWERS else [],
     )
-    context: dict = {"calls": [], "question": question}
+    context: dict = {"calls": [], "question": question, "user_token": identity.sign(user) if user else None}
     try:
         result = await Runner.run(agent, question, context=context, session=session, max_turns=10)
     except (InputGuardrailTripwireTriggered, OutputGuardrailTripwireTriggered) as tripped:
@@ -155,7 +176,7 @@ async def ask(q: Question) -> dict:
             answer = REFUSAL if blocked_by == "read-only guardrail" else RAILS_REFUSAL
         calls = context["calls"] if isinstance(tripped, OutputGuardrailTripwireTriggered) else []
         audit.record(session_id=session_id, question=question, blocked=True, calls=calls, usage={},
-                     elapsed_ms=elapsed, blocked_by=blocked_by)
+                     elapsed_ms=elapsed, blocked_by=blocked_by, user=user.id if user else None)
         return {
             "answer": answer,
             "blocked": True,
@@ -169,7 +190,8 @@ async def ask(q: Question) -> dict:
     except Exception as exc:  # model errors, max turns: report them as JSON the UI can show
         log.exception("run failed")
         audit.record(session_id=session_id, question=question, blocked=False, calls=context["calls"], usage={},
-                     elapsed_ms=round((time.perf_counter() - started) * 1000), error=str(exc))
+                     elapsed_ms=round((time.perf_counter() - started) * 1000), error=str(exc),
+                     user=user.id if user else None)
         raise HTTPException(status_code=502, detail=f"The answer could not be completed: {exc}") from exc
 
     calls = context["calls"]
@@ -178,9 +200,11 @@ async def ask(q: Question) -> dict:
         for key in ("model_requests", "input_tokens", "output_tokens", "total_tokens"):
             total[key] += int(call.get("usage", {}).get(key, 0))
     elapsed = round((time.perf_counter() - started) * 1000)
-    audit.record(session_id=session_id, question=question, blocked=False, calls=calls, usage=total, elapsed_ms=elapsed)
+    audit.record(session_id=session_id, question=question, blocked=False, calls=calls, usage=total, elapsed_ms=elapsed,
+                 user=user.id if user else None)
     return {
         "answer": str(result.final_output),
+        "user": user.id if user else None,
         "blocked": False,
         "session_id": session_id,
         "agents": [a["name"] for a in registered],

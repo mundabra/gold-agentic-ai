@@ -52,7 +52,7 @@ Give an agent the server's URL in its `AgentsSdkExecutor(build_agent, {"crm-tool
 
 ## Use your own database
 
-1. **A read-only login with column grants.** Grant SELECT only on the tables and columns GOLD may read, the way `deploy/postgres/03-reader-role.sh` does for the sample. The database then enforces your data policy, whatever SQL a model writes, and the schema the model sees contains only those columns. Set `GOLD_DATABASE_URL`, and `GOLD_DB_SCHEMAS` if your tables are outside `public`.
+1. **A read-only login with column grants.** Grant SELECT only on the tables and columns GOLD may read, the way `deploy/postgres/04-reader-role.sh` does for the sample. The database then enforces your data policy, whatever SQL a model writes, and the schema the model sees contains only those columns. Set `GOLD_DATABASE_URL`, and `GOLD_DB_SCHEMAS` if your tables are outside `public`.
 2. **A glossary.** Create the `glossary` table from `deploy/postgres/02-glossary.sql` and replace the rows with your business terms. Each row has a term, synonyms (comma-separated phrases users actually say), the definition, a SQL hint and an owner. Terms are matched as exact phrases first, so synonyms matter. If your data lives on a read-only replica, put the glossary in a small database of its own and set `GOLD_GLOSSARY_DATABASE_URL`.
 3. **Masking of free text.** Set `GOLD_PII_COLUMNS` to column-name fragments to mask as a second layer.
 4. **Evaluation.** Write questions for your data (`evals/questions.jsonl`) and run `gold eval`.
@@ -93,6 +93,7 @@ Then run `gold eval` and `gold bench` to confirm the change did not make answers
 | `GOLD_PUBLIC_URL` | `http://localhost:8000` | This agent's own address, published in its Agent Card |
 | `GOLD_REGISTRY_TOKEN` | empty | Shared secret agents present to register (empty: open registration) |
 | `GOLD_SESSION_DB_URL` | a SQLite file | Conversation memory; a SQLAlchemy URL such as `postgresql+asyncpg://…` for a shared store |
+| `GOLD_AUTH_MODE`, `GOLD_IDENTITY_SECRET`, `GOLD_REQUIRE_IDENTITY` and other identity settings | `none` | Who is asking, enforced by row-level security ([identity](identity.md#settings)) |
 | `GOLD_RAILS_URL` and other `GOLD_RAILS_*` | empty (off) | Optional NVIDIA NeMo Guardrails ([guardrails](guardrails.md#run-it)) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | empty | OpenTelemetry OTLP/HTTP endpoint; setting it turns tracing on ([observability](observability.md)) |
 | `GOLD_TRACE_CONTENT` | `false` | Put prompts, SQL and results into spans |

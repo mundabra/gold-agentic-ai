@@ -36,6 +36,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `gold/evaluate.py`, `bench.py`, `dataset.py`, `aiperf.py`, `cli.py` | `gold eval`, `gold bench`, `gold dataset`, AIPerf payloads and summaries, the CLI |
 | `scripts/aiperf.sh` | Serving benchmark with NVIDIA AIPerf, using the production SQL requests |
 | `gold/config.py` | Every setting, read from `GOLD_*` environment variables |
+| `gold/identity.py`, `deploy/postgres/03-row-level-security.sql` | Sign-in modes, the signed user context, and the row-level security it drives |
 | `gold/rails.py`, `deploy/guardrails/` | Optional NVIDIA NeMo Guardrails: the client and the rails configuration |
 | `gold/telemetry.py`, `gold/audit.py` | OpenTelemetry tracing and the audit trail |
 | `deploy/postgres/` | Sample data, glossary, and the read-only role with column grants |
@@ -45,7 +46,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 ## Rules you must not break
 
 1. **Stay vendor-neutral.** Never name a cloud or inference provider in code, docs or examples. Open-source projects (vLLM, LiteLLM, SQLGlot, NVIDIA AIPerf) and model names are fine.
-2. **Never weaken governance to make something work.** That covers the SQLGlot check, the function denylist, single-statement execution, the dry-run cost limit, column grants, text scrubbing, the input guardrail and the registry token. If a test fails because of one of them, fix the caller.
+2. **Never weaken governance to make something work.** That covers the SQLGlot check, the function denylist, single-statement execution, the dry-run cost limit, column grants, row-level security, the signed user context, text scrubbing, the input guardrail and the registry token. If a test fails because of one of them, fix the caller.
 3. **No secrets in the repo.** No API keys, tokens or passwords other than the documented local defaults (`gold_reader`, `gold_admin`, `sk-gold-local`).
 4. **The SQL prompt contract is load-bearing.** Changing `gold/sql_model.py` changes what a fine-tuned model sees. Say so in the pull request and re-run `gold eval`.
 5. **The evaluation set is held out.** Never add `evals/questions.jsonl` questions to training data, and never edit reference SQL to make a model pass.

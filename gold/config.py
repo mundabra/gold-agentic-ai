@@ -70,6 +70,21 @@ PUBLIC_URL = env("GOLD_PUBLIC_URL", "http://localhost:8000")
 HOST = env("GOLD_HOST", "0.0.0.0")  # nosec B104 - containers must listen on all interfaces
 PORT = int(env("GOLD_PORT", "8000"))
 
+# Identity (see gold/identity.py): none | proxy | oidc | demo
+AUTH_MODE = env("GOLD_AUTH_MODE", "none").strip().lower()
+REQUIRE_IDENTITY = env_bool("GOLD_REQUIRE_IDENTITY", False)  # refuse questions without a user
+IDENTITY_SECRET = env("GOLD_IDENTITY_SECRET", "gold-dev-identity-secret")  # shared by all GOLD services; set it
+AUTH_USER_HEADER = env("GOLD_AUTH_USER_HEADER", "X-Forwarded-User")
+AUTH_GROUPS_HEADER = env("GOLD_AUTH_GROUPS_HEADER", "X-Forwarded-Groups")
+OIDC_JWKS_URL = env("GOLD_OIDC_JWKS_URL", "")
+OIDC_ISSUER = env("GOLD_OIDC_ISSUER", "")
+OIDC_AUDIENCE = env("GOLD_OIDC_AUDIENCE", "")
+OIDC_USER_CLAIM = env("GOLD_OIDC_USER_CLAIM", "email")
+OIDC_GROUPS_CLAIM = env("GOLD_OIDC_GROUPS_CLAIM", "groups")
+DEMO_USERS = [u.strip() for u in env(
+    "GOLD_DEMO_USERS", "finance@example.com,jane.peacock@example.com,margaret.park@example.com,steve.johnson@example.com"
+).split(",") if u.strip()]
+
 # Optional NVIDIA NeMo Guardrails server (see gold/rails.py and docs/guardrails.md).
 RAILS_URL = env("GOLD_RAILS_URL", "")
 RAILS_CONFIG_ID = env("GOLD_RAILS_CONFIG_ID", "gold")
