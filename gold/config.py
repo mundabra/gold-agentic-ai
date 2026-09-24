@@ -93,6 +93,11 @@ RAILS_CHECK_ANSWERS = env_bool("GOLD_RAILS_CHECK_ANSWERS", False)
 RAILS_FAIL_OPEN = env_bool("GOLD_RAILS_FAIL_OPEN", False)
 RAILS_TIMEOUT = float(env("GOLD_RAILS_TIMEOUT", "20"))
 
+# Feedback loop (see gold/feedback.py): an insert-only login for the orchestrator,
+# and a curator login for analysts reviewing feedback. Empty turns feedback off.
+FEEDBACK_DATABASE_URL = env("GOLD_FEEDBACK_DATABASE_URL", "")
+CURATOR_DATABASE_URL = env("GOLD_CURATOR_DATABASE_URL", "")
+
 # Audit trail: every question is logged as JSON to stdout, and appended to this file if set.
 AUDIT_LOG = env("GOLD_AUDIT_LOG", "")
 

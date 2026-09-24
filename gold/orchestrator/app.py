@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from gold import audit, config, identity, llm, rails, runlog, sessions, telemetry
+from gold import audit, config, feedback, identity, llm, rails, runlog, sessions, telemetry
 from gold.orchestrator.a2a_tools import discover, make_tool
 
 log = logging.getLogger("gold.orchestrator")
@@ -106,6 +106,15 @@ class Question(BaseModel):
     session_id: str | None = None
 
 
+class Feedback(BaseModel):
+    answer_id: str
+    question: str
+    sql: str | None = None
+    rating: str
+    comment: str | None = None
+    corrected_sql: str | None = None
+
+
 app = FastAPI(title="GOLD orchestrator")
 _STATIC = Path(__file__).parent / "static"
 
@@ -134,6 +143,27 @@ def whoami(request: Request) -> dict:
     }
 
 
+@app.get("/api/features")
+def features() -> dict:
+    return {"feedback": feedback.enabled()}
+
+
+@app.post("/api/feedback")
+def give_feedback(fb: Feedback, request: Request) -> dict:
+    """A user rates an answer; it goes into the review queue for analysts (gold feedback list)."""
+    if not feedback.enabled():
+        raise HTTPException(status_code=503, detail="Feedback is not configured (GOLD_FEEDBACK_DATABASE_URL).")
+    try:
+        user = identity.from_request(request.headers)
+        feedback.submit(answer_id=fb.answer_id, question=fb.question, sql_ran=fb.sql, rating=fb.rating,
+                        comment=fb.comment, corrected_sql=fb.corrected_sql, user=user.id if user else None)
+    except identity.AuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except feedback.FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"received": True}
+
+
 @app.get("/api/agents")
 async def agents() -> list[dict]:
     return await discover()
@@ -151,6 +181,7 @@ async def ask(q: Question, request: Request) -> dict:
     if user is None and config.REQUIRE_IDENTITY:
         raise HTTPException(status_code=401, detail="Sign in to ask questions.")
     session_id = q.session_id or uuid.uuid4().hex
+    answer_id = uuid.uuid4().hex
     # Conversations are private to their user: the same session id can't read someone else's.
     session = sessions.get(f"{user.id}:{session_id}" if user else session_id)
     started = time.perf_counter()
@@ -206,9 +237,10 @@ async def ask(q: Question, request: Request) -> dict:
             total[key] += int(call.get("usage", {}).get(key, 0))
     elapsed = round((time.perf_counter() - started) * 1000)
     audit.record(session_id=session_id, question=question, blocked=False, calls=calls, usage=total, elapsed_ms=elapsed,
-                 user=user.id if user else None)
+                 user=user.id if user else None, answer_id=answer_id)
     return {
         "answer": str(result.final_output),
+        "answer_id": answer_id,
         "user": user.id if user else None,
         "blocked": False,
         "session_id": session_id,

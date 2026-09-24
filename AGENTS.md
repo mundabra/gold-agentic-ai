@@ -37,6 +37,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `scripts/aiperf.sh` | Serving benchmark with NVIDIA AIPerf, using the production SQL requests |
 | `gold/config.py` | Every setting, read from `GOLD_*` environment variables |
 | `gold/identity.py`, `deploy/postgres/03-row-level-security.sql` | Sign-in modes, the signed user context, and the row-level security it drives |
+| `gold/feedback.py`, `deploy/postgres/05-feedback.sh` | The feedback loop: the review queue, its two logins, promotion to verified queries |
 | `gold/rails.py`, `deploy/guardrails/` | Optional NVIDIA NeMo Guardrails: the client and the rails configuration |
 | `gold/telemetry.py`, `gold/audit.py` | OpenTelemetry tracing and the audit trail |
 | `deploy/postgres/` | Sample data, glossary, and the read-only role with column grants |
