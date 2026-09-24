@@ -1,6 +1,6 @@
 # Contributing
 
-Issues and pull requests are welcome.
+Issues and pull requests are welcome. If you use an AI coding agent, point it at [AGENTS.md](AGENTS.md): it has the setup, the checks and the rules in one place.
 
 ## Set up
 

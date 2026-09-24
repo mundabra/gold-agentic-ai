@@ -178,4 +178,4 @@ examples/        a third agent that joins without touching the orchestrator
 tests/           unit tests and the whole system end to end with the scripted model
 ```
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). The sample data is the [Chinook database](https://github.com/lerocha/chinook-database) (MIT). GOLD is released under the [Apache 2.0 license](LICENSE).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), and [AGENTS.md](AGENTS.md) for AI coding agents. The sample data is the [Chinook database](https://github.com/lerocha/chinook-database) (MIT). GOLD is released under the [Apache 2.0 license](LICENSE).
