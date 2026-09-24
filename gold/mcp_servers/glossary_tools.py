@@ -23,6 +23,12 @@ def search_glossary(terms: str) -> str:
     return json.dumps({"matches": matches})
 
 
+@server.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True))
+def find_verified_queries(question: str) -> str:
+    """Find analyst-approved example queries for questions similar to this one."""
+    return json.dumps({"examples": db.search_verified_queries(question)})
+
+
 def main() -> None:
     serve(server)
 

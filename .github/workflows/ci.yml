@@ -25,6 +25,8 @@ jobs:
       - run: pip install -e ".[dev,sessions]"   # sessions: also tests the shared Postgres conversation store
       - name: Unit tests and the full multi-agent flow (scripted model)
         run: pytest -q
+      - name: Every approved example query is valid and held out from the evaluation
+        run: GOLD_DATABASE_URL=postgresql://gold_reader:gold_reader@localhost:55432/gold gold verify-queries
 
   helm:
     runs-on: ubuntu-latest

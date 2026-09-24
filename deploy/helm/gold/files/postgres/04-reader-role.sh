@@ -17,7 +17,7 @@ REVOKE TEMPORARY ON DATABASE :"DBNAME" FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO gold_reader;
 
 -- Tables without personal data: every column.
-GRANT SELECT ON album, artist, genre, media_type, playlist, playlist_track, track, invoice_line, glossary TO gold_reader;
+GRANT SELECT ON album, artist, genre, media_type, playlist, playlist_track, track, invoice_line, glossary, verified_queries TO gold_reader;
 
 -- Tables with personal data: only the columns analysis needs. Email, phone,
 -- fax, street address, postal code and birth date are not readable.

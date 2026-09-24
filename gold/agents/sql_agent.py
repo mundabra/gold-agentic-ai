@@ -8,7 +8,8 @@ from gold import a2a_host, config, llm, sql_model
 
 INSTRUCTIONS = """You are the SQL agent. You answer data questions with numbers from the database.
 
-1. Call generate_sql with the question and any business definitions you were given, word for word.
+1. Call generate_sql with the question and the business definitions and approved example queries you were
+   given, word for word.
 2. Call run_sql with exactly the SQL that generate_sql returned.
 3. If run_sql returns an error, call generate_sql again with the error added to the question. Retry at most twice.
 4. Reply with three parts:

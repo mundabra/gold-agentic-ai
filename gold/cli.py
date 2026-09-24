@@ -6,6 +6,7 @@
     gold bench [--model M] [--concurrency 1,4,8]    performance: latency, throughput, cost
     gold dataset finetune/seed_pairs.jsonl          stage 2: build a fine-tuning dataset
     gold aiperf-payloads / aiperf-summary           stage 3: serving benchmarks with NVIDIA AIPerf (scripts/aiperf.sh)
+    gold verify-queries                             check every approved example query (run it in CI)
 """
 
 import argparse
@@ -107,6 +108,8 @@ def _main() -> None:
     d.add_argument("--out", default="finetune/data")
     d.add_argument("--eval-questions", default="evals/questions.jsonl", help="held out: never used for training")
     d.add_argument("--no-definitions", action="store_true", help="train on bare questions only")
+    vq = sub.add_parser("verify-queries", help="check that every approved example query parses, runs and is not an evaluation question")
+    vq.add_argument("--eval-questions", default="evals/questions.jsonl")
     ap = sub.add_parser("aiperf-payloads", help="write GOLD's real SQL requests as NVIDIA AIPerf raw payloads")
     ap.add_argument("--questions", default="evals/questions.jsonl")
     ap.add_argument("--out", default="results/aiperf-payloads.jsonl")
@@ -117,7 +120,7 @@ def _main() -> None:
     asum.add_argument("--slo-ms", type=float, default=3000, help="latency target the goodput column refers to")
     args = parser.parse_args()
 
-    if args.command in {"eval", "bench", "dataset", "aiperf-payloads"}:
+    if args.command in {"eval", "bench", "dataset", "aiperf-payloads", "verify-queries"}:
         # Engineer commands run on your machine: read .env, and reach the
         # Compose database on localhost unless told otherwise.
         load_env_file()
@@ -146,6 +149,15 @@ def _main() -> None:
                 print(f"FAILED quality gate: {arm} scored {score:.0%}, below {args.min_accuracy:.0%}", file=sys.stderr)
                 sys.exit(2)
             print(f"Passed quality gate: {arm} scored {score:.0%} (bar {args.min_accuracy:.0%})")
+    elif args.command == "verify-queries":
+        from gold import semantic
+
+        problems = semantic.verify_queries(args.eval_questions)
+        for p in problems:
+            print(f"FAIL  {p['question']}: {p['reason']}")
+        if problems:
+            sys.exit(1)
+        print("All approved example queries are valid.")
     elif args.command == "aiperf-payloads":
         from gold import aiperf
 

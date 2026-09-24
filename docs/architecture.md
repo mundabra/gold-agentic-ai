@@ -7,10 +7,10 @@ GOLD is **three agents, two tool servers and a registry**, connected by open pro
 | Component | Kind | What it does | Talks to |
 |---|---|---|---|
 | **Orchestrator** | Agent + web app | Receives the question, blocks write requests, decides which specialists to call, and writes the final answer. Serves the chat UI and the `/api/ask` endpoint. Keeps conversation memory (Agents SDK sessions). | Registry (discovery), specialists (A2A), model endpoint |
-| **Definitions agent** | Agent (A2A service) | Finds the agreed meaning of every business term in the question: revenue, active customer, last year. | Glossary tools (MCP), model endpoint |
+| **Definitions agent** | Agent (A2A service) | Finds the agreed meaning of every business term in the question (revenue, active customer, last year) and analyst-approved example queries for similar questions. | Glossary tools (MCP), model endpoint |
 | **SQL agent** | Agent (A2A service) | Turns the question plus definitions into one read-only query using the dedicated SQL model, runs it, and returns the SQL and the result. | Data tools (MCP), SQL model |
 | **Data tools** | MCP server | `describe_schema` and `run_sql`: SQLGlot parsing, dry-run cost limit, timeout, row cap, text scrubbing. | Postgres (read-only login with column grants) |
-| **Glossary tools** | MCP server | `search_glossary`: exact phrase match on terms and synonyms, full-text search as fallback. | Postgres |
+| **Glossary tools** | MCP server | `search_glossary` (exact phrase match on terms and synonyms, full-text search as fallback) and `find_verified_queries` (approved examples with overlapping wording). | Postgres |
 | **Registry** | Service | Holds the Agent Card of every live specialist. Agents re-register every 30 seconds; stale entries expire. | — |
 | **Postgres** | Database | Business data (sample: a digital media store) and the `glossary` table. | — |
 | **Model endpoint** | External | Any OpenAI-compatible Chat Completions API. Optionally the LiteLLM gateway, with vLLM on your GPUs behind it. | — |
@@ -60,7 +60,7 @@ Every response also carries a trace (agents called, tools used, SQL run, tokens,
 | Step | Control |
 |---|---|
 | Question arrives | Guardrail refuses requests to change data. No model is called and no tokens are spent. Optional NeMo Guardrails input rails check for jailbreaks, off-topic requests and personal data. |
-| Before SQL is written | Business terms are resolved from the glossary, not guessed by the model. |
+| Before SQL is written | Business terms are resolved from the glossary, not guessed by the model, and approved example queries show the conventions. |
 | Before a query runs | SQLGlot parses it: exactly one read-only query, with no DML, DDL, `INTO`, locks, transaction control or admin functions anywhere in the tree. The planner's cost estimate is checked. |
 | While it runs | Single-statement execution, read-only transaction, 10-second timeout, and a database login with SELECT rights on permitted columns only. Personal-data columns can't be read at all. With identity on, the query runs as the signed-in user and row-level security filters the rows. |
 | Before results leave | Emails and phone numbers scrubbed from text and error messages; rows capped. |

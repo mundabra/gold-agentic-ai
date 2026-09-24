@@ -56,7 +56,8 @@ def test_agents_are_discovered_from_the_registry(running_stack):
 def test_answer_uses_definitions_then_sql_and_matches_the_database(running_stack):
     body = ask("What was our revenue by country last year?")
     assert [c["agent"] for c in body["calls"]] == ["Definitions agent", "SQL agent"]
-    assert [s["tool"] for s in body["calls"][0]["steps"]] == ["search_glossary"]
+    assert [s["tool"] for s in body["calls"][0]["steps"]] == ["search_glossary", "find_verified_queries"]
+    assert "Approved example queries" in body["calls"][0]["answer"]
     assert [s["tool"] for s in body["calls"][1]["steps"]] == ["generate_sql", "run_sql"]
 
     with psycopg.connect(DB_URL) as conn:

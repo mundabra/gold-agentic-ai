@@ -89,3 +89,52 @@ INSERT INTO glossary (term, synonyms, definition, sql_hint, owner) VALUES
     '',
     'Legal'
 );
+
+-- Verified queries: questions an analyst has answered with SQL they vouch for.
+-- The Definitions agent retrieves the closest ones for each question and passes them
+-- to the SQL agent as worked examples. `gold verify-queries` checks every one in CI.
+-- Keep them out of evals/questions.jsonl, or the evaluation stops being a fair test.
+
+CREATE TABLE verified_queries
+(
+    id          SERIAL PRIMARY KEY,
+    question    TEXT NOT NULL UNIQUE,
+    sql         TEXT NOT NULL,
+    verified_by TEXT NOT NULL,
+    verified_at DATE NOT NULL DEFAULT CURRENT_DATE,
+    search      TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', question)) STORED
+);
+
+CREATE INDEX verified_queries_search_idx ON verified_queries USING GIN (search);
+
+INSERT INTO verified_queries (question, sql, verified_by, verified_at) VALUES
+(
+    'What was revenue in each country for the latest year?',
+    'SELECT i.billing_country, ROUND(SUM(il.unit_price * il.quantity), 2) AS revenue FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id WHERE EXTRACT(YEAR FROM i.invoice_date) = (SELECT MAX(EXTRACT(YEAR FROM invoice_date)) FROM invoice) GROUP BY i.billing_country ORDER BY revenue DESC',
+    'finance.analytics@example.com', '2026-09-01'
+),
+(
+    'How many active customers are there in each country?',
+    'SELECT c.country, COUNT(DISTINCT c.customer_id) AS active_customers FROM customer c JOIN invoice i ON i.customer_id = c.customer_id WHERE i.invoice_date > (SELECT MAX(invoice_date) FROM invoice) - INTERVAL ''12 months'' GROUP BY c.country ORDER BY active_customers DESC',
+    'salesops.analytics@example.com', '2026-09-01'
+),
+(
+    'Which sales rep generated the most revenue in the latest year?',
+    'SELECT e.first_name || '' '' || e.last_name AS sales_rep, ROUND(SUM(il.unit_price * il.quantity), 2) AS revenue FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id JOIN customer c ON c.customer_id = i.customer_id JOIN employee e ON e.employee_id = c.support_rep_id WHERE EXTRACT(YEAR FROM i.invoice_date) = (SELECT MAX(EXTRACT(YEAR FROM invoice_date)) FROM invoice) GROUP BY e.employee_id, e.first_name, e.last_name ORDER BY revenue DESC LIMIT 1',
+    'salesops.analytics@example.com', '2026-09-01'
+),
+(
+    'What is the average order value by year?',
+    'SELECT EXTRACT(YEAR FROM i.invoice_date) AS year, ROUND(SUM(il.unit_price * il.quantity) / COUNT(DISTINCT i.invoice_id), 2) AS average_order_value FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id GROUP BY 1 ORDER BY 1',
+    'finance.analytics@example.com', '2026-09-01'
+),
+(
+    'Which genres earned the most revenue overall?',
+    'SELECT g.name AS genre, ROUND(SUM(il.unit_price * il.quantity), 2) AS revenue FROM invoice_line il JOIN track t ON t.track_id = il.track_id JOIN genre g ON g.genre_id = t.genre_id GROUP BY g.name ORDER BY revenue DESC LIMIT 5',
+    'marketing.analytics@example.com', '2026-09-01'
+),
+(
+    'How many units were sold per month in the latest year?',
+    'SELECT EXTRACT(MONTH FROM i.invoice_date) AS month, SUM(il.quantity) AS units_sold FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id WHERE EXTRACT(YEAR FROM i.invoice_date) = (SELECT MAX(EXTRACT(YEAR FROM invoice_date)) FROM invoice) GROUP BY 1 ORDER BY 1',
+    'salesops.analytics@example.com', '2026-09-01'
+);
