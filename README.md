@@ -127,6 +127,7 @@ SQL_MODEL=openai/gold-sql               # "openai/" = any OpenAI-compatible serv
 | Control | How it is enforced |
 |---|---|
 | Read-only | Three layers: the orchestrator's guardrail stops "delete…" requests before any model call; the tool server parses every query with SQLGlot and allows one `SELECT` only (no DML, DDL, `INTO`, locks or admin functions); the database login has SELECT rights only and read-only transactions. |
+| Per-user access | Sign-in through your proxy or identity provider (OIDC). The user's identity travels to the database, and Postgres row-level security decides which rows each person sees ([identity](docs/identity.md)). |
 | Personal data | The database login cannot read email, phone, fax, street address, postal code or birth date. Queries that try fail, and the schema the model sees leaves them out. Emails and phone numbers are also scrubbed from any text GOLD returns, including error messages. |
 | Runaway queries | A dry run asks the database planner for the cost estimate first and refuses anything above `GOLD_MAX_QUERY_COST`. Every query has a 10-second timeout and a row cap. |
 | One meaning per term | Definitions live in a glossary table with an owner per term. Agents quote them word for word. |
@@ -163,7 +164,7 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 Phase 2 closes the gaps enterprises ask about first. Done items are in `main`; the rest are in progress, in this order:
 
 - [x] **Tracing and audit:** OpenTelemetry traces across every service, and a JSON audit record per question.
-- [ ] **User identity and row-level security:** sign-in at the orchestrator; the user's identity travels to the database, where row-level policies decide what they can see.
+- [x] **User identity and row-level security:** proxy or OIDC sign-in; the user's identity travels to the database, where row-level policies decide what they can see ([identity](docs/identity.md)).
 - [ ] **Verified queries:** analyst-approved question-and-SQL examples next to the glossary, retrieved as examples for the SQL model and checked in CI.
 - [ ] **Feedback loop:** thumbs up/down and corrected SQL go to a review queue; approved fixes become verified queries, evaluation cases and fine-tuning data.
 - [x] **NVIDIA NeMo Guardrails (optional):** input and output rails for jailbreaks, off-topic requests and personal data ([guardrails](docs/guardrails.md)).

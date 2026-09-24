@@ -35,6 +35,20 @@ governance:
   piiColumns: "email,phone,fax,address"
   openaiTracing: false           # the Agents SDK's trace export to OpenAI stays off unless you opt in
 
+# Identity: who is asking, enforced by Postgres row-level security (docs/identity.md).
+auth:
+  mode: none                     # none | proxy | oidc | demo
+  requireIdentity: false         # refuse questions without a signed-in user
+  identitySecret: ""             # shared by all GOLD services; generated when empty
+  userHeader: X-Forwarded-User   # proxy mode
+  groupsHeader: X-Forwarded-Groups
+  oidc:
+    jwksUrl: ""
+    issuer: ""
+    audience: ""
+    userClaim: email
+    groupsClaim: groups
+
 # OpenTelemetry tracing across every GOLD service. Set an OTLP/HTTP endpoint
 # (an OpenTelemetry Collector, Jaeger, Grafana Tempo or your APM) to turn it on.
 tracing:

@@ -20,6 +20,15 @@ data:
   GOLD_PII_COLUMNS: {{ .Values.governance.piiColumns | quote }}
   GOLD_OPENAI_TRACING: {{ .Values.governance.openaiTracing | quote }}
   GOLD_DB_SCHEMAS: {{ .Values.database.schemas | quote }}
+  GOLD_AUTH_MODE: {{ .Values.auth.mode | quote }}
+  GOLD_REQUIRE_IDENTITY: {{ .Values.auth.requireIdentity | quote }}
+  GOLD_AUTH_USER_HEADER: {{ .Values.auth.userHeader | quote }}
+  GOLD_AUTH_GROUPS_HEADER: {{ .Values.auth.groupsHeader | quote }}
+  GOLD_OIDC_JWKS_URL: {{ .Values.auth.oidc.jwksUrl | quote }}
+  GOLD_OIDC_ISSUER: {{ .Values.auth.oidc.issuer | quote }}
+  GOLD_OIDC_AUDIENCE: {{ .Values.auth.oidc.audience | quote }}
+  GOLD_OIDC_USER_CLAIM: {{ .Values.auth.oidc.userClaim | quote }}
+  GOLD_OIDC_GROUPS_CLAIM: {{ .Values.auth.oidc.groupsClaim | quote }}
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.tracing.otlpEndpoint | quote }}
   GOLD_TRACE_CONTENT: {{ .Values.tracing.content | quote }}
   GOLD_AUDIT_LOG: {{ .Values.audit.logFile | quote }}
@@ -43,6 +52,17 @@ type: Opaque
 stringData:
   apiKey: {{ .Values.llm.apiKey | quote }}
   registryToken: {{ .Values.registry.token | quote }}
+  {{- /* Identity secret: the value you set, else the one from a previous install, else a new random one. */}}
+  {{- $identitySecret := .Values.auth.identitySecret }}
+  {{- if not $identitySecret }}
+  {{- $existing := lookup "v1" "Secret" .Release.Namespace (printf "%s-llm" $name) }}
+  {{- if and $existing $existing.data (hasKey $existing.data "identitySecret") }}
+  {{- $identitySecret = index $existing.data "identitySecret" | b64dec }}
+  {{- else }}
+  {{- $identitySecret = randAlphaNum 40 }}
+  {{- end }}
+  {{- end }}
+  identitySecret: {{ $identitySecret | quote }}
 ---
 {{- end }}
 {{- if not .Values.database.existingSecret }}

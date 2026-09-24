@@ -11,7 +11,7 @@ from a2a.types import Role, SendMessageRequest, TaskState
 from agents import FunctionTool
 from agents.tool_context import ToolContext
 
-from gold import config
+from gold import config, identity
 
 
 async def discover() -> list[dict]:
@@ -21,13 +21,16 @@ async def discover() -> list[dict]:
         return resp.json()
 
 
-async def call_agent(url: str, text: str, timeout: float = 180) -> dict:
+async def call_agent(url: str, text: str, user_token: str | None = None, timeout: float = 180) -> dict:
     """Send one message to an A2A agent and collect its answer and trace."""
     async with httpx.AsyncClient(timeout=timeout) as http:
         client = await create_client(url, client_config=ClientConfig(streaming=False, httpx_client=http))
         answer, trace, failure = [], {}, None
         try:
-            request = SendMessageRequest(message=new_text_message(text, role=Role.ROLE_USER))
+            message = new_text_message(text, role=Role.ROLE_USER)
+            if user_token:
+                message.metadata.update({identity.METADATA_KEY: user_token})
+            request = SendMessageRequest(message=message)
             async for response in client.send_message(request):
                 if response.HasField("task"):
                     task = response.task
@@ -57,7 +60,8 @@ def make_tool(entry: dict) -> FunctionTool:
         request = json.loads(args_json or "{}").get("request", "")
         started = time.perf_counter()
         try:
-            result = await call_agent(entry["url"], request)
+            token = ctx.context.get("user_token") if isinstance(ctx.context, dict) else None
+            result = await call_agent(entry["url"], request, token)
         except Exception as exc:
             result = {"answer": "", "trace": {}, "failure": f"could not reach the agent: {exc}"}
         record = {

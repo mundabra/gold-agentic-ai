@@ -2,10 +2,10 @@
 
 import json
 
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.types import ToolAnnotations
 
-from gold import db
+from gold import config, db, identity
 from gold.guards import UnsafeQuery, mask_value
 from gold.mcp_servers import serve
 
@@ -23,15 +23,27 @@ def describe_schema() -> str:
     return db.describe_schema()
 
 
+def _user(ctx: Context):
+    request = getattr(ctx.request_context, "request", None)
+    token = request.headers.get(identity.HEADER) if request is not None else None
+    return identity.verify(token)
+
+
 @server.tool(annotations=READ_ONLY)
-def run_sql(sql: str) -> str:
+def run_sql(sql: str, ctx: Context) -> str:
     """Run one read-only SELECT query and return the rows as JSON.
 
-    Personal data (email, phone, fax, address) is masked in the result.
+    Rows are filtered for the signed-in user by the database's row-level security.
     Anything that would change data is refused.
     """
     try:
-        result = db.run_query(sql)
+        user = _user(ctx)
+    except identity.AuthError as exc:
+        return json.dumps({"error": "refused", "reason": str(exc)})
+    if user is None and config.REQUIRE_IDENTITY:
+        return json.dumps({"error": "refused", "reason": "No signed-in user: GOLD requires identity."})
+    try:
+        result = db.run_query(sql, user=user)
     except UnsafeQuery as exc:
         return json.dumps({"error": "refused", "reason": str(exc)})
     except Exception as exc:  # database errors go back to the agent so it can fix the query

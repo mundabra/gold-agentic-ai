@@ -5,6 +5,7 @@ import decimal
 import re
 
 import psycopg
+from psycopg import sql as pgsql
 
 from gold import config
 from gold.guards import UnsafeQuery, check_read_only, mask_rows, mask_value
@@ -22,14 +23,21 @@ def connect(url: str | None = None) -> psycopg.Connection:
     return psycopg.connect(url or config.DATABASE_URL, autocommit=False, connect_timeout=5)
 
 
-def run_query(sql: str, max_rows: int | None = None) -> dict:
-    """Run one read-only query and return masked rows as plain JSON types."""
+def run_query(sql: str, max_rows: int | None = None, user=None) -> dict:
+    """Run one read-only query and return masked rows as plain JSON types.
+
+    With a user, the query runs as that user for Postgres row-level security
+    (gold.user_id and gold.user_groups, readable with current_setting()).
+    """
     query = check_read_only(sql)
     limit = max_rows or config.MAX_ROWS
     with connect() as conn:
         conn.read_only = True
         with conn.cursor() as cur:
             cur.execute("SET LOCAL statement_timeout = '10s'")
+            if user is not None:
+                cur.execute(pgsql.SQL("SET LOCAL gold.user_id = {}").format(pgsql.Literal(user.id)))
+                cur.execute(pgsql.SQL("SET LOCAL gold.user_groups = {}").format(pgsql.Literal(",".join(user.groups))))
             # prepare=True uses the extended protocol, which refuses more than one
             # statement: a second line of defence behind the SQL parser.
             if config.MAX_QUERY_COST > 0:

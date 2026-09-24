@@ -1,7 +1,7 @@
 """Governance checks shared by the tools: read-only SQL and personal-data masking.
 
 These are the first line of defence. The database role GOLD connects with is
-also read-only (deploy/postgres/03-reader-role.sh), so a query that slipped
+also read-only (deploy/postgres/04-reader-role.sh), so a query that slipped
 past these checks still could not change data.
 """
 
