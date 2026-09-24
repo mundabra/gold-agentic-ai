@@ -5,7 +5,7 @@ Issues and pull requests are welcome.
 ## Set up
 
 ```bash
-uv venv && uv pip install -e ".[dev]"
+uv venv && uv pip install -e ".[dev,sessions]"
 docker run -d --name gold-test-pg -p 55432:5432 -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin \
   -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" postgres:17-alpine
 pytest
