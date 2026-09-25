@@ -8,7 +8,9 @@ GOLD is a vendor-neutral enterprise agentic AI reference architecture: **Governe
 
 ## What to work on
 
-[ROADMAP.md](ROADMAP.md) is the plan: v0.6 (trust boundaries) first, in the order it lists, then v0.7. Each item is a GitHub issue with scope and acceptance criteria. Work on issues labelled `ready`; leave `needs-owner` ones alone. Don't start items from the "Later" or "Not planned" lists without the maintainer.
+[ROADMAP.md](ROADMAP.md) is the plan: v0.6 (trust boundaries) first, in the order it lists, then v0.7. Each item is a GitHub issue with scope and acceptance criteria. Work on issues labelled `ready`; leave `needs-owner` ones alone. Don't start items from the "Later" or "Not planned" lists without the maintainer. Every change must pass ROADMAP.md's "Keep it simple" check: no new mandatory component, use the existing extension points (app manifest, store interfaces, MCP tools, settings), standard parts over custom code, and the smallest slice that meets the acceptance criteria.
+
+`main` is protected: changes land only through a pull request with green `test`, `helm` and `image` checks, squash-merged. Force-pushes and deleting `main` are blocked.
 
 ## Setup and checks
 
