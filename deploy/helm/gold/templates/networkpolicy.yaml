@@ -11,9 +11,10 @@
       "mcp-data"          (list "sql-agent")
       "mcp-glossary"      (list "definitions-agent")
       "mcp-crm"           (list "account-agent" "orchestrator")
-      "postgres"          (list "mcp-data" "mcp-glossary" "mcp-crm" "orchestrator")
-      "scripted-model"    (list "orchestrator" "sql-agent" "definitions-agent" "account-agent")
-      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "guardrails")
+      "mcp-knowledge"     (list "account-agent" "sql-agent" "definitions-agent")
+      "postgres"          (list "mcp-data" "mcp-glossary" "mcp-crm" "mcp-knowledge" "orchestrator")
+      "scripted-model"    (list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-knowledge")
+      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-knowledge" "guardrails")
       "guardrails"        (list "orchestrator") -}}
 {{- range $target, $from := $callers }}
 apiVersion: networking.k8s.io/v1

@@ -11,7 +11,7 @@ GOLD is a vendor-neutral enterprise agentic AI reference architecture: **Governe
 ```bash
 uv venv && uv pip install -e ".[dev,sessions]"
 docker run -d --name gold-test-pg -p 55432:5432 -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin \
-  -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" postgres:17-alpine
+  -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" pgvector/pgvector:pg17
 pytest -q                                   # expect all passed, 0 skipped, with the database up
 helm lint deploy/helm/gold
 helm template gold deploy/helm/gold --set gateway.enabled=true --set vllm.enabled=true \
@@ -29,6 +29,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 | `gold/orchestrator/` | FastAPI app for every app: `/api/apps`, `/api/ask`, `/api/actions/*`, `/api/feedback`; chat UI (`static/index.html`); guardrails; A2A tools built from the registry |
 | `gold/apps.py` | Finds apps and reads their manifests (agents, components, CLI, hooks, UI) |
 | `gold/approvals.py` | Signed proposals and one-time approvals for tools that change things |
+| `gold/knowledge/`, `deploy/postgres/07-knowledge.sh` | Knowledge retrieval: chunking and sync (`pipeline.py`), stores (`pgvector.py`, `vector_stores.py`, `memory.py`), the `search_knowledge` MCP server, retrieval eval |
 | `gold/a2a_host.py`, `gold/mcp.py` | Serve an Agents SDK agent over A2A and keep it registered; serve an MCP tool server and read the signed-in user in a tool |
 | `gold/identity.py`, `gold/pg.py` | Sign-in modes and the signed user context; running a Postgres transaction as that user (row-level security) |
 | `gold/feedback.py`, `deploy/postgres/05-feedback.sh` | The feedback queue and its two logins (apps add what happens next) |
@@ -60,6 +61,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 - **Add an app:** follow `docs/build-an-app.md`; copy `apps/sales_copilot/` as a template. Add its components to `compose.yaml`, the Helm values (and secret lists, NetworkPolicy) and `tests/stack.py`.
 - **Add an agent to an app:** copy `apps/data_analyst/examples/trends_agent.py`. List it in the app's `app.yaml`, or tag a skill `app:<name>`.
 - **Add a tool:** add a function to an `MCPServer` in the app's `tools/`. Reading tools get `READ_ONLY`; tools that change anything get `WRITES` and must call `approvals.gate()` and be idempotent on `action_id`.
+- **Add documents:** put Markdown in an app's `knowledge:` folder (with `audience:` front matter if restricted) and add questions to its `eval.jsonl`; run `gold knowledge eval`.
 - **Change the glossary:** edit `deploy/postgres/02-glossary.sql`, copy it to the Helm folder, then run `gold eval` to see the effect.
 - **Change the UI:** `gold/orchestrator/static/index.html` is dependency-free on purpose (it must work offline) and app-agnostic (everything app-specific comes from `/api/apps`). Keep it that way.
 - **Release:** bump the version in `pyproject.toml`, `gold/__init__.py`, `deploy/helm/gold/Chart.yaml` (`version` and `appVersion`) and the image tags in `values.yaml`. Then push a `vX.Y.Z` tag; `.github/workflows/release.yml` publishes the images.

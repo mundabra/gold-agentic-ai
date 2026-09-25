@@ -42,6 +42,8 @@ data:
   GOLD_DATA_MCP_URL: "http://{{ $name }}-mcp-data:8000/mcp"
   GOLD_GLOSSARY_MCP_URL: "http://{{ $name }}-mcp-glossary:8000/mcp"
   GOLD_CRM_MCP_URL: "http://{{ $name }}-mcp-crm:8000/mcp"
+  GOLD_KNOWLEDGE_MCP_URL: "http://{{ $name }}-mcp-knowledge:8000/mcp"
+  GOLD_EMBEDDING_MODEL: {{ .Values.llm.embeddingModel | quote }}
   GOLD_APPS: {{ .Values.apps.enabled | join "," | quote }}
   GOLD_DEFAULT_APP: {{ .Values.apps.default | quote }}
 ---
@@ -82,6 +84,11 @@ stringData:
   url: "postgresql://gold_reader:{{ .Values.postgres.readerPassword }}@{{ $name }}-postgres:5432/gold"
   {{- end }}
   glossaryUrl: {{ .Values.database.glossaryUrl | quote }}
+  {{- if .Values.knowledge.url }}
+  knowledgeUrl: {{ .Values.knowledge.url | quote }}
+  {{- else if .Values.postgres.enabled }}
+  knowledgeUrl: "postgresql://gold_knowledge:{{ .Values.postgres.knowledgePassword }}@{{ $name }}-postgres:5432/gold"
+  {{- end }}
   {{- if .Values.database.crmUrl }}
   crmUrl: {{ .Values.database.crmUrl | quote }}
   {{- else if .Values.postgres.enabled }}

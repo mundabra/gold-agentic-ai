@@ -17,6 +17,7 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))   # so `python tests/stack.py` can import gold, as pytest can
 PORTS = {
     "fake-llm": 4010,
     "registry": 18000,
@@ -26,6 +27,7 @@ PORTS = {
     "definitions-agent": 18004,
     "mcp-crm": 18005,
     "account-agent": 18006,
+    "mcp-knowledge": 18007,
     "orchestrator": 18080,
 }
 
@@ -41,6 +43,8 @@ def base_env(real_model: bool) -> dict:
     env["GOLD_DATA_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-data']}/mcp"
     env["GOLD_GLOSSARY_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-glossary']}/mcp"
     env["GOLD_CRM_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-crm']}/mcp"
+    env["GOLD_KNOWLEDGE_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-knowledge']}/mcp"
+    env.setdefault("GOLD_KNOWLEDGE_URL", env["GOLD_DATABASE_URL"].replace("gold_reader:gold_reader", "gold_knowledge:gold_knowledge"))
     env.setdefault("GOLD_CRM_DATABASE_URL", env["GOLD_DATABASE_URL"].replace("gold_reader:gold_reader", "gold_crm_writer:gold_crm_writer"))
     env["PYTHONUNBUFFERED"] = "1"
     return env
@@ -78,6 +82,7 @@ def start(real_model: bool = False, log_dir: Path | None = None) -> list[subproc
     launch("mcp-glossary", [py, "-m", "gold.cli", "serve", "mcp-glossary"], "/healthz")
     launch("sql-agent", [py, "-m", "gold.cli", "serve", "sql-agent"], "/healthz")
     launch("definitions-agent", [py, "-m", "gold.cli", "serve", "definitions-agent"], "/healthz")
+    launch("mcp-knowledge", [py, "-m", "gold.cli", "serve", "mcp-knowledge"], "/healthz")
     launch("mcp-crm", [py, "-m", "gold.cli", "serve", "mcp-crm"], "/healthz")
     launch("account-agent", [py, "-m", "gold.cli", "serve", "account-agent"], "/healthz")
     launch("orchestrator", [py, "-m", "gold.cli", "serve", "orchestrator"], "/healthz")
@@ -86,11 +91,21 @@ def start(real_model: bool = False, log_dir: Path | None = None) -> list[subproc
     deadline = time.time() + 30
     while time.time() < deadline:
         names = {a["name"] for a in httpx.get(f"http://127.0.0.1:{PORTS['registry']}/agents").json()}
-        if {"SQL agent", "Definitions agent", "Account agent"} <= names:
+        if {"SQL agent", "Definitions agent", "Account agent"} <= names and knowledge_loaded(env):
             return procs
         time.sleep(0.5)
     stop(procs)
-    raise TimeoutError("agents did not register")
+    raise TimeoutError("agents did not register, or the knowledge documents did not load")
+
+
+def knowledge_loaded(env: dict) -> bool:
+    """The knowledge server loads the apps' documents in the background; wait for them."""
+    from gold.knowledge import open_store
+
+    try:
+        return open_store(env["GOLD_KNOWLEDGE_URL"]).collections().get("sales-playbook", 0) > 0
+    except Exception:
+        return False
 
 
 def stop(procs: list[subprocess.Popen]) -> None:

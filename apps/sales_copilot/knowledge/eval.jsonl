@@ -1,0 +1,14 @@
+{"question": "How much discount can I give without asking anyone?", "expected_source": "pricing-and-discounts.md"}
+{"question": "Can I add a discount on top of a genre bundle?", "expected_source": "pricing-and-discounts.md"}
+{"question": "What does a track cost?", "expected_source": "pricing-and-discounts.md"}
+{"question": "Which licence tier fits a company with about 3,000 plays a month?", "expected_source": "volume-licensing.md"}
+{"question": "What should I ask before quoting a volume licence for events?", "expected_source": "volume-licensing.md"}
+{"question": "The customer says we are too expensive. What do I say?", "expected_source": "objection-handling.md"}
+{"question": "They already use a streaming service for their office music", "expected_source": "objection-handling.md"}
+{"question": "When should I call an at-risk account?", "expected_source": "account-management.md"}
+{"question": "What follow-up date do I set after sending a quote?", "expected_source": "account-management.md"}
+{"question": "What should I put in an activity note?", "expected_source": "account-management.md"}
+{"question": "What should I pitch to someone who likes Brazilian music?", "expected_source": "catalogue-highlights.md"}
+{"question": "Which rock albums are the easiest first offer?", "expected_source": "catalogue-highlights.md"}
+{"question": "What is the lowest monthly price we accept for an Enterprise licence?", "expected_source": "discount-approval-matrix.md", "groups": ["sales-leadership"]}
+{"question": "Who can approve 30% off?", "expected_source": "discount-approval-matrix.md", "groups": ["sales-leadership"]}

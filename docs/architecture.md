@@ -13,6 +13,7 @@ GOLD has two parts: a **platform** that is the same for every app, and **apps** 
 | **A2A host** (`a2a_host.py`) | Serves any Agents SDK agent over A2A with one call, and keeps it registered. |
 | **MCP helpers** (`mcp.py`) | Serve a tool server, read the signed-in user in a tool, and annotate tools as reading or writing. |
 | **Identity** (`identity.py`) | Sign-in modes (proxy headers, OIDC, demo), and the short-lived signed user context that travels to agents and tools ([identity](identity.md)). |
+| **Knowledge** (`knowledge/`, component `mcp-knowledge`) | Loads the document collections apps declare into pgvector and serves `search_knowledge` to any agent, filtered by the user's groups, with citations ([knowledge](knowledge.md)). |
 | **Approvals** (`approvals.py`) | Signed proposals and one-time approvals for tools that change things ([approvals](approvals.md)). |
 | **Guardrails** | The Agents SDK input guardrail for read-only apps, and optional NVIDIA NeMo Guardrails for every app ([guardrails](guardrails.md)). |
 | **Audit and tracing** | A JSON audit record per question and per decision; OpenTelemetry across every service ([observability](observability.md)). |
@@ -24,7 +25,7 @@ GOLD has two parts: a **platform** that is the same for every app, and **apps** 
 | App | Agents (A2A) | Tools (MCP) | Data access |
 |---|---|---|---|
 | **Talk to your Data** (`data-analyst`) | Definitions agent, SQL agent | Glossary tools (`search_glossary`, `find_verified_queries`); data tools (`describe_schema`, `run_sql`) | Read-only login with column grants; row-level security per user |
-| **Sales copilot** (`sales-copilot`) | Account agent, plus the two above | CRM tools (`my_accounts`, `find_account`, `account_brief`, `next_best_offers`, `list_activities`, `log_activity`) | The read-only login with row-level security; a separate write-only login for CRM activities, used only after approval |
+| **Sales copilot** (`sales-copilot`) | Account agent, plus the two above | CRM tools (`my_accounts`, `find_account`, `account_brief`, `next_best_offers`, `list_activities`, `log_activity`); `search_knowledge` over the sales playbook | The read-only login with row-level security; a separate write-only login for CRM activities, used only after approval |
 
 An app is a manifest plus its agents and tools. Apps can share agents: the Sales copilot's manifest lists the Definitions and SQL agents, which run once and serve both apps. [Build an app](build-an-app.md) walks through one.
 
@@ -34,6 +35,7 @@ Two model roles, set by configuration:
 |---|---|---|
 | `gold-general` | Orchestrator and every agent | Reliable tool calling |
 | `gold-sql` | The SQL agent's `generate_sql` step only | Good SQL for your schema. This is the model you fine-tune in stage 2. |
+| `gold-embed` | Knowledge retrieval (documents and questions) | An embedding model; changing it means re-embedding (`gold knowledge reset && gold knowledge sync`) |
 
 ## One question, end to end
 
@@ -100,8 +102,8 @@ Every response carries a trace (agents called, tools used and their inputs, toke
 
 | | Docker Compose | Helm (any Kubernetes) |
 |---|---|---|
-| GOLD services | 8 containers from one image (platform: orchestrator, registry; data app: 2 agents, 2 tool servers; sales app: 1 agent, 1 tool server), ports on 127.0.0.1 | One Deployment per component from one image; each gets only the secrets it uses; optional NetworkPolicies |
+| GOLD services | 9 containers from one image (platform: orchestrator, registry, knowledge; data app: 2 agents, 2 tool servers; sales app: 1 agent, 1 tool server), ports on 127.0.0.1 | One Deployment per component from one image; each gets only the secrets it uses; optional NetworkPolicies |
 | Apps | All apps, or `GOLD_APPS` | All apps, or `apps.enabled` |
-| Database | Postgres container with sample data | Postgres StatefulSet, or your own database via `database.url` |
+| Database | Postgres with pgvector, and the sample data | Postgres StatefulSet, or your own database via `database.url` |
 | Models | Any API, the scripted model (`--profile scripted`) or the gateway (`--profile gateway`) | Any API, the scripted model, or the gateway plus vLLM on GPU nodes |
 | Scaling | One of each | Agents and tool servers scale horizontally; keep one registry and add a shared session store before scaling the orchestrator |

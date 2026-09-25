@@ -3,9 +3,9 @@
 {{- $all := deepCopy .Values.components -}}
 {{- if .Values.scriptedModel.enabled }}{{- $_ := set $all "scripted-model" (dict "replicas" 1) -}}{{- end }}
 {{- $needsDb := list "mcp-data" "mcp-glossary" "mcp-crm" -}}
-{{- $needsLlm := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" -}}
+{{- $needsLlm := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-knowledge" -}}
 {{- $needsRegistry := list "registry" "sql-agent" "definitions-agent" "account-agent" -}}
-{{- $needsIdentity := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-data" "mcp-crm" -}}
+{{- $needsIdentity := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-data" "mcp-crm" "mcp-knowledge" -}}
 {{- range $component, $cfg := $all }}
 apiVersion: apps/v1
 kind: Deployment
@@ -53,6 +53,10 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: url } }
             - name: GOLD_GLOSSARY_DATABASE_URL
               valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: glossaryUrl, optional: true } }
+            {{- end }}
+            {{- if eq $component "mcp-knowledge" }}
+            - name: GOLD_KNOWLEDGE_URL
+              valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: knowledgeUrl, optional: true } }
             {{- end }}
             {{- if eq $component "mcp-crm" }}
             - name: GOLD_CRM_DATABASE_URL

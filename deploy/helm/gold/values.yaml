@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/mundabra/gold-ai-agent   # published on each release; or build the Dockerfile yourself
-  tag: "0.4.0"
+  tag: "0.5.0"
   pullPolicy: IfNotPresent
 
 # --- Models. Every model call goes to one OpenAI-compatible endpoint.
@@ -15,6 +15,7 @@ llm:
   orchestratorModel: gold-general
   agentModel: gold-general
   sqlModel: gold-sql
+  embeddingModel: gold-embed    # for knowledge retrieval
 
 # The SQL model's prompt contract. A fine-tuned model must see exactly the
 # prompt it was trained on.
@@ -60,7 +61,7 @@ tracing:
 # endpoint as GOLD (llm.baseUrl or the gateway). Config: files/guardrails/.
 guardrails:
   enabled: false
-  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.4.0
+  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.5.0
   model: gold-general              # the model the policy self-checks use
   checkAnswers: true
   failOpen: false                  # block questions if the rails server is unreachable
@@ -90,13 +91,20 @@ feedback:
 
 postgres:
   enabled: true
-  image: postgres:17-alpine
+  image: pgvector/pgvector:pg17
   adminPassword: gold_admin
   readerPassword: gold_reader
   feedbackPassword: gold_feedback
   curatorPassword: gold_curator
   crmPassword: gold_crm_writer
+  knowledgePassword: gold_knowledge
   storage: 2Gi
+
+# Knowledge retrieval (docs/knowledge.md): passages and embeddings in pgvector, in the bundled
+# Postgres by default. Or a knowledge base served through the OpenAI Vector Stores API
+# (e.g. "vectorstores+https://your-gateway/v1", search only).
+knowledge:
+  url: ""                        # default: the bundled Postgres, as the gold_knowledge login
 
 # --- Apps: what GOLD serves (apps/*/app.yaml). Empty = every app in the image.
 apps:
@@ -112,6 +120,7 @@ components:
   definitions-agent: { replicas: 1 }
   mcp-data: { replicas: 1 }
   mcp-glossary: { replicas: 1 }
+  mcp-knowledge: { replicas: 1 }   # platform: document search for every app
   # Sales copilot (apps/sales_copilot)
   account-agent: { replicas: 1 }
   mcp-crm: { replicas: 1 }
@@ -148,6 +157,10 @@ gateway:
   models:
     - alias: gold-general
       model: openai/your-tool-calling-model     # "openai/" = any OpenAI-compatible server
+      apiBase: https://your-provider.example/v1
+      apiKeyEnv: GENERAL_API_KEY
+    - alias: gold-embed
+      model: openai/your-embedding-model
       apiBase: https://your-provider.example/v1
       apiKeyEnv: GENERAL_API_KEY
     - alias: gold-sql

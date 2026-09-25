@@ -120,7 +120,7 @@ def from_request(headers) -> User | None:
         return User(id=user_id, groups=tuple(groups)) if user_id else None
     if mode == "demo":
         user_id = headers.get("X-Gold-Demo-User")
-        return User(id=user_id) if user_id in config.DEMO_USERS else None
+        return User(id=user_id, groups=config.DEMO_GROUPS.get(user_id, ())) if user_id in config.DEMO_USERS else None
     if mode == "oidc":
         authorization = headers.get("Authorization")
         return _from_jwt(authorization) if authorization else None

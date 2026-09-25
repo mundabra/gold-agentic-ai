@@ -116,6 +116,8 @@ Then run `gold eval` and `gold bench` to confirm the change did not make answers
 | `GOLD_APP_PACKAGES` | empty | Extra Python packages to find apps in (apps in your own repository) |
 | `GOLD_APPROVAL_TTL_SECONDS` | `3600` | How long a proposed action can be approved |
 | `GOLD_CRM_DATABASE_URL` | `postgresql://gold_crm_writer:…@postgres:5432/gold` | Sales copilot: the login that can only add CRM activities (the CRM tool server only) |
+| `GOLD_KNOWLEDGE_URL`, `GOLD_EMBEDDING_MODEL` and other knowledge settings | pgvector in the bundled Postgres, `gold-embed` | Knowledge retrieval ([knowledge](knowledge.md#settings)) |
+| `GOLD_DEMO_USERS` | four sample users | Demo sign-in: `user=group|group` entries, comma-separated |
 | `GOLD_AT_RISK_DAYS` | `180` | Sales copilot: days without a purchase before an account needs attention |
 | `GOLD_PUBLIC_URL` | `http://localhost:8000` | This agent's own address, published in its Agent Card |
 | `GOLD_REGISTRY_TOKEN` | empty | Shared secret agents present to register (empty: open registration) |

@@ -16,6 +16,8 @@ def _customer_name(text: str) -> str:
 
 def _intent(text: str) -> str:
     lowered = text.lower()
+    if re.search(r"discount|policy|licen[cs]e|objection|playbook|how (much|do|should)|allowed|approv", lowered):
+        return "playbook"
     if re.search(r"\blog\b|follow.?up|remind", lowered):
         return "log"
     if re.search(r"offer|pitch|recommend|sell", lowered):
@@ -34,6 +36,15 @@ def decide(turn: Turn) -> dict | None:
     if "my_accounts" not in turn.tools:  # not the Account agent
         return None
     intent = _intent(turn.user)
+    if intent == "playbook":
+        if "search_knowledge" not in turn.called:
+            return tool_call("search_knowledge", {"collection": "sales-playbook", "query": turn.user, "k": 3})
+        found = json.loads(turn.output["search_knowledge"])
+        results = found.get("results", [])
+        if not results:
+            return {"content": f"The sales playbook has nothing on that. ({found.get('reason', 'no passages')})"}
+        top = results[0]
+        return {"content": f"{top['text']} {top['cite']}"}
     if intent == "portfolio":
         if "my_accounts" not in turn.called:
             return tool_call("my_accounts", {"sort_by": "at_risk" if "attention" in turn.user or "risk" in turn.user else "revenue"})

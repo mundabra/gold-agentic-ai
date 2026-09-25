@@ -12,6 +12,12 @@ components:
   account-agent: apps.sales_copilot.agents.account_agent
   mcp-crm: apps.sales_copilot.tools.crm_tools
 
+# Documents the Account agent searches (gold/knowledge): loaded into the knowledge store on start-up.
+knowledge:
+  sales-playbook:
+    path: knowledge
+    description: How we sell. Prices and discounts, volume licences, objections, account management, catalogue highlights.
+
 scripted: apps.sales_copilot.scripted
 
 ui:
@@ -21,3 +27,4 @@ ui:
     - Brief me on Luís Gonçalves
     - What should I offer Luís Gonçalves next?
     - "Log a call with Luís Gonçalves: interested in Latin jazz, follow up in two weeks"
+    - How much discount can I give without approval?

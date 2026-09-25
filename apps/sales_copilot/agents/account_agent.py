@@ -22,6 +22,9 @@ INSTRUCTIONS = """You are the Account agent. You help a sales rep with their own
   that it is logged.
 - Dates: today is {today}. Take follow-up dates (YYYY-MM-DD) from this calendar, never by counting:
 {calendar}
+- How we sell (prices, discounts, licences, objections, follow-up rules, what to pitch): call
+  search_knowledge with collection "sales-playbook" and answer only from the passages it returns,
+  quoting each passage's "cite" after the sentence that uses it. If nothing relevant comes back, say so.
 - Drafting an email: write the draft for the rep to send; you cannot send email.
 
 Reply with the facts the tools returned: a short summary first, then a markdown table where it helps.
@@ -54,7 +57,8 @@ CARD = a2a_host.agent_card(
     name="Account agent",
     description=(
         "Knows the signed-in sales rep's accounts: portfolio and accounts at risk, account briefs, next-best "
-        "offers and activity history. Proposes calls, meetings, notes and follow-ups for the rep to approve."
+        "offers and activity history, and the sales playbook (prices, discounts, licences, objections), with "
+        "citations. Proposes calls, meetings, notes and follow-ups for the rep to approve."
     ),
     skills=[
         AgentSkill(
@@ -70,7 +74,8 @@ CARD = a2a_host.agent_card(
 
 
 def main() -> None:
-    a2a_host.serve(CARD, a2a_host.AgentsSdkExecutor(build_agent, {"crm-tools": settings.CRM_MCP_URL}))
+    a2a_host.serve(CARD, a2a_host.AgentsSdkExecutor(
+        build_agent, {"crm-tools": settings.CRM_MCP_URL, "knowledge": config.KNOWLEDGE_MCP_URL}))
 
 
 if __name__ == "__main__":

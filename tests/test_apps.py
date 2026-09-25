@@ -22,6 +22,11 @@ def test_an_app_serves_the_agents_it_lists_and_agents_that_tag_themselves():
     assert data.serves({"name": "Trends agent", "skills": [{"tags": ["app:data-analyst"]}]})
 
 
+def test_apps_declare_document_collections():
+    [playbook] = apps.knowledge_collections()
+    assert playbook.name == "sales-playbook" and playbook.path.endswith("apps/sales_copilot/knowledge")
+
+
 def test_hooks_resolve_to_app_code():
     check = apps.get("data-analyst").hook("check_correction")
     assert check("SELECT 1").upper().startswith("SELECT")

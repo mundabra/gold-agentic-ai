@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+    <img alt="GOLD: Governed · Observable · Layered · Deployable" src="docs/images/logo-light.svg" width="460">
+  </picture>
+</p>
+
 # GOLD
 
 [![ci](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml)
@@ -5,7 +12,7 @@
 
 **An enterprise agentic AI reference architecture. Governed · Observable · Layered · Deployable.**
 
-GOLD is an open-source blueprint for putting multi-agent applications in front of employees without losing control of data, actions, quality or cost. The platform does the hard enterprise parts once: identity through to the database, guardrails, human approval for actions, audit, tracing, conversation memory, feedback and evaluation. Apps sit on top as folders: a manifest, a few agents and their tools. Add an app and the whole platform works for it, with no platform changes.
+GOLD is an open-source blueprint for putting multi-agent applications in front of employees without losing control of data, actions, quality or cost. The platform does the hard enterprise parts once: identity through to the database, guardrails, human approval for actions, knowledge retrieval (RAG) with access control, audit, tracing, conversation memory, feedback and evaluation. Apps sit on top as folders: a manifest, a few agents and their tools. Add an app and the whole platform works for it, with no platform changes.
 
 It runs on any Kubernetes cluster with any OpenAI-compatible model: a hosted API, your own fine-tuned model, or open models on your own GPUs.
 
@@ -18,7 +25,7 @@ It runs on any Kubernetes cluster with any OpenAI-compatible model: a hosted API
 | App | For | What it shows |
 |---|---|---|
 | [**Talk to your Data**](apps/data_analyst/README.md) | Analysts, finance, leadership | Ask in plain language, get the number your company's definitions agree on, with the SQL shown. A Definitions agent and a SQL agent; read-only; measured at 95% end to end on the sample questions. |
-| [**Sales copilot**](apps/sales_copilot/README.md) | Sales reps | "Brief me on this account", "who needs attention?", "what should I offer?", "log a call and follow up in two weeks". Typed tools instead of free SQL, each rep sees only their own accounts, and nothing is written until the rep approves it. It reuses the other app's agents for company-wide numbers. |
+| [**Sales copilot**](apps/sales_copilot/README.md) | Sales reps | "Brief me on this account", "who needs attention?", "what should I offer?", "how much discount can I give?", "log a call and follow up in two weeks". Typed tools instead of free SQL, answers from the sales playbook with citations, each rep sees only their own accounts and documents, and nothing is written until the rep approves it. It reuses the other app's agents for company-wide numbers. |
 
 They are deliberately different. One is read-only analytics; the other takes actions. Together they exercise every part of the platform, and they are the templates for [building your own app](docs/build-an-app.md).
 
@@ -26,7 +33,7 @@ They are deliberately different. One is read-only analytics; the other takes act
 
 | | Pillar | What the platform gives every app |
 |---|---|---|
-| **G** | **Governed** | The signed-in user's identity travels to the tools and the database, where row-level security decides what they see. Read-only by default. Agents can propose actions; only the person who asked can approve them ([approvals](docs/approvals.md)). Input guardrails, optional NVIDIA NeMo Guardrails, restricted database logins, personal data kept out. |
+| **G** | **Governed** | The signed-in user's identity travels to the tools and the database, where row-level security decides which rows and which documents they see. Read-only by default. Agents can propose actions; only the person who asked can approve them ([approvals](docs/approvals.md)). Input guardrails, optional NVIDIA NeMo Guardrails, restricted database logins, personal data kept out. |
 | **O** | **Observable** | Every answer shows the agents and tools behind it. Every question and every approval leaves a JSON audit record. One OpenTelemetry trace per question across all services ([observability](docs/observability.md)). `gold eval`, `gold bench` and NVIDIA AIPerf measure quality and speed before a change ships. |
 | **L** | **Layered** | Platform, apps, tools, data and models are separate layers joined by open standards: OpenAI-compatible model APIs, [A2A](https://a2a-protocol.org) between agents, [MCP](https://modelcontextprotocol.io) for tools, the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) for agent logic. Swap a model, add an agent or add an app without touching the layers around it. |
 | **D** | **Deployable** | One container image. Docker Compose on a laptop, a Helm chart for any Kubernetes cluster with per-component secrets and NetworkPolicies, and a path from a hosted API to vLLM on your own GPUs (NVIDIA Nemotron profile included). |
@@ -37,7 +44,7 @@ They are deliberately different. One is read-only analytics; the other takes act
 
 1. A person asks a question in an app. The **orchestrator** identifies them, applies the app's guardrails and loads the conversation.
 2. It gives the app's orchestrator agent the app's instructions and, as tools, only the agents that app may use, found live in the **registry**.
-3. **Agents** (A2A services) do the work with **MCP tools**. The user's signed identity goes with every call, so the database filters rows per person.
+3. **Agents** (A2A services) do the work with **MCP tools**, including `search_knowledge` over the company's documents. The user's signed identity goes with every call, so the database filters rows and documents per person.
 4. A tool that would change something returns a **proposal** instead of acting. The person approves or rejects it in the app; only then does the platform run it, once.
 5. The answer comes back with a trace of every agent and tool call, and an audit record is written.
 
@@ -98,6 +105,7 @@ On 20 business questions over the sample database, Talk to your Data scored **95
 | Per-user access | Sign-in through your proxy or identity provider (OIDC). A signed user context travels to every agent and tool; Postgres row-level security decides which rows each person sees ([identity](docs/identity.md)). |
 | Actions need a person | Write tools return a signed proposal; the platform runs it only after the person who asked approves, exactly once. Agents never hold the key, so they cannot approve their own actions ([approvals](docs/approvals.md)). |
 | Read-only where it should be | A read-only app blocks change requests before any model call; the SQL tools allow one `SELECT` (SQLGlot); the database login has SELECT rights only. The Sales copilot's only write login can add CRM activities and nothing else. |
+| Documents by audience | Knowledge passages carry the groups allowed to read them; the filter runs inside pgvector, so a restricted passage is never returned to anyone else ([knowledge](docs/knowledge.md)). |
 | Personal data | Database logins cannot read email, phone, address or birth date columns. Emails and phone numbers are also scrubbed from text GOLD returns. |
 | Runaway queries | A dry run checks the planner's cost estimate first; every query has a timeout and a row cap. |
 | Auditable | Each response carries its trace; every question, proposal, approval and rejection leaves a JSON audit record; OpenTelemetry traces span all services with content kept out by default. |
@@ -123,11 +131,12 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 ## Roadmap
 
 **Done:**
+- **v0.5.0, knowledge retrieval (RAG):** pgvector in GOLD's Postgres, embeddings through the same OpenAI-compatible endpoint, one MCP `search_knowledge` tool for any app, access by group, citations in the UI, and a retrieval eval ([knowledge](docs/knowledge.md)). The Sales copilot answers from its playbook.
 - **v0.4.0, the platform:** apps as folders with a manifest; one orchestrator and UI for every app; human approval for actions; the Sales copilot as a second sample app.
 - **v0.3.0, enterprise controls:** OpenTelemetry and audit, identity with row-level security, verified queries, the feedback loop, NVIDIA NeMo Guardrails, the Nemotron profile, charts.
 
 **Next, in rough order:**
-- **Knowledge retrieval (RAG):** a small retriever interface in the platform, exposed to agents as an MCP `search_knowledge` tool, with pgvector as the default store and other vector databases as one-file adapters. The Sales copilot's playbook is the first corpus.
+- **Better retrieval:** keyword and vector search combined, re-ranking, and PDF and Word ingestion.
 - **A semantic model:** metrics, dimensions and joins defined once, alongside the glossary.
 - **Cost per user and per app:** pass the signed-in user and the app to the gateway so spend is attributed.
 - **More databases** beyond PostgreSQL, and **chat front-ends** (Slack, Microsoft Teams) on the same API and identity.
@@ -136,11 +145,11 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 
 ```text
 gold/               the platform: orchestrator (API, UI, guardrails), registry, A2A host, MCP helpers,
-                    identity, approvals, audit, tracing, sessions, feedback, app loader, CLI
+                    identity, approvals, knowledge (RAG), audit, tracing, sessions, feedback, app loader, CLI
 apps/data_analyst/  Talk to your Data: agents, tools, SQL checks, evaluation, fine-tuning recipe
-apps/sales_copilot/ Sales copilot: Account agent, CRM tools
-deploy/             Postgres (sample data, glossary, logins, row-level security), LiteLLM, guardrails, Helm chart
-docs/               architecture, building an app, approvals, the three stages, production
+apps/sales_copilot/ Sales copilot: Account agent, CRM tools, the sales playbook (knowledge)
+deploy/             Postgres with pgvector (sample data, glossary, logins, row-level security), LiteLLM, guardrails, Helm chart
+docs/               architecture, building an app, approvals, knowledge, the three stages, production
 tests/              unit tests, and both apps end to end with the scripted model
 ```
 

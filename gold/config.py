@@ -63,9 +63,14 @@ OIDC_ISSUER = env("GOLD_OIDC_ISSUER", "")
 OIDC_AUDIENCE = env("GOLD_OIDC_AUDIENCE", "")
 OIDC_USER_CLAIM = env("GOLD_OIDC_USER_CLAIM", "email")
 OIDC_GROUPS_CLAIM = env("GOLD_OIDC_GROUPS_CLAIM", "groups")
-DEMO_USERS = [u.strip() for u in env(
-    "GOLD_DEMO_USERS", "finance@example.com,jane.peacock@example.com,margaret.park@example.com,steve.johnson@example.com"
+# Demo sign-in: "user=group|group" entries; the groups drive knowledge access (and gold.user_groups in Postgres).
+_DEMO = [u.strip() for u in env(
+    "GOLD_DEMO_USERS",
+    "finance@example.com=finance|leadership,jane.peacock@example.com=sales,"
+    "margaret.park@example.com=sales|sales-leadership,steve.johnson@example.com=sales",
 ).split(",") if u.strip()]
+DEMO_USERS = [u.split("=", 1)[0] for u in _DEMO]
+DEMO_GROUPS = {u.split("=", 1)[0]: tuple(g for g in u.split("=", 1)[1].split("|") if g) if "=" in u else () for u in _DEMO}
 
 # Optional NVIDIA NeMo Guardrails server (see gold/rails.py and docs/guardrails.md).
 RAILS_URL = env("GOLD_RAILS_URL", "")
@@ -74,6 +79,15 @@ RAILS_MODEL = env("GOLD_RAILS_MODEL", "gold-general")  # the model the self-chec
 RAILS_CHECK_ANSWERS = env_bool("GOLD_RAILS_CHECK_ANSWERS", False)
 RAILS_FAIL_OPEN = env_bool("GOLD_RAILS_FAIL_OPEN", False)
 RAILS_TIMEOUT = float(env("GOLD_RAILS_TIMEOUT", "20"))
+
+# Knowledge retrieval (see gold/knowledge/ and docs/knowledge.md). The store is chosen by URL:
+# postgresql://... (pgvector, the default), vectorstores+https://gateway/v1 (a vector store served
+# through LiteLLM or any OpenAI Vector Stores API), or memory:// (tests).
+KNOWLEDGE_URL = env("GOLD_KNOWLEDGE_URL", "postgresql://gold_knowledge:gold_knowledge@postgres:5432/gold")
+# Embeddings come from the same OpenAI-compatible endpoint as every model call.
+EMBEDDING_MODEL = env("GOLD_EMBEDDING_MODEL", "gold-embed")
+KNOWLEDGE_MCP_URL = env("GOLD_KNOWLEDGE_MCP_URL", "http://mcp-knowledge:8000/mcp")
+KNOWLEDGE_SYNC = env_bool("GOLD_KNOWLEDGE_SYNC", True)   # load each app's documents when mcp-knowledge starts
 
 # Feedback loop (see gold/feedback.py): an insert-only login for the orchestrator,
 # and a curator login for the people reviewing feedback. Empty turns feedback off.
