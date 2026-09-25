@@ -1,4 +1,4 @@
-# GOLD on one machine. Every service is the same image running a different component.
+# GOLD on one machine, with both sample apps. Every service is the same image running a different component.
 #
 #   cp .env.example .env                          # choose your model endpoint
 #   docker compose --profile scripted up --build   # no API key; or plain "up" with a real endpoint in .env
@@ -7,7 +7,7 @@
 # Profiles:
 #   scripted  a stand-in model with canned answers: see the whole flow with no API key
 #   gateway   LiteLLM Proxy: one endpoint in front of several models (stages 2 and 3)
-#   example   a third agent (examples/trends_agent.py) that joins without any orchestrator change
+#   example   an extra agent (apps/data_analyst/examples/trends_agent.py) that joins an app without any change
 #   tracing   Jaeger at http://localhost:16686; set OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 in .env
 #   guardrails  NVIDIA NeMo Guardrails server; set GOLD_RAILS_URL=http://guardrails:8000 in .env
 
@@ -54,6 +54,9 @@ x-gold: &gold
     GOLD_REGISTRY_URL: http://registry:8000
     GOLD_DATA_MCP_URL: http://mcp-data:8000/mcp
     GOLD_GLOSSARY_MCP_URL: http://mcp-glossary:8000/mcp
+    GOLD_CRM_MCP_URL: http://mcp-crm:8000/mcp
+    GOLD_APPS: ${GOLD_APPS:-}               # empty: serve every app
+    GOLD_DEFAULT_APP: ${GOLD_DEFAULT_APP:-}
 
 services:
   postgres:
@@ -66,6 +69,7 @@ services:
       GOLD_READER_PASSWORD: ${GOLD_READER_PASSWORD:-gold_reader}
       GOLD_FEEDBACK_PASSWORD: ${GOLD_FEEDBACK_PASSWORD:-gold_feedback}
       GOLD_CURATOR_PASSWORD: ${GOLD_CURATOR_PASSWORD:-gold_curator}
+      GOLD_CRM_PASSWORD: ${GOLD_CRM_PASSWORD:-gold_crm_writer}
     ports:
       - "127.0.0.1:${GOLD_DB_PORT:-5432}:5432"    # for gold eval / bench / dataset on your machine
     volumes:
@@ -80,6 +84,7 @@ services:
     <<: *gold
     command: ["serve", "registry"]
 
+  # Talk to your Data (apps/data_analyst)
   mcp-data:
     <<: *gold
     command: ["serve", "mcp-data"]
@@ -112,6 +117,28 @@ services:
       registry: { condition: service_healthy }
       mcp-glossary: { condition: service_healthy }
 
+  # Sales copilot (apps/sales_copilot)
+  mcp-crm:
+    <<: *gold
+    command: ["serve", "mcp-crm"]
+    environment:
+      <<: *gold-env
+      GOLD_PUBLIC_URL: http://mcp-crm:8000   # approvals come back here
+      # Only this service gets the login that can add CRM activities.
+      GOLD_CRM_DATABASE_URL: ${GOLD_COMPOSE_CRM_DATABASE_URL:-postgresql://gold_crm_writer:${GOLD_CRM_PASSWORD:-gold_crm_writer}@postgres:5432/gold}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  account-agent:
+    <<: *gold
+    command: ["serve", "account-agent"]
+    environment:
+      <<: *gold-env
+      GOLD_PUBLIC_URL: http://account-agent:8000
+    depends_on:
+      registry: { condition: service_healthy }
+      mcp-crm: { condition: service_healthy }
+
   orchestrator:
     <<: *gold
     command: ["serve", "orchestrator"]
@@ -132,7 +159,7 @@ services:
   trends-agent:
     <<: *gold
     profiles: ["example"]
-    entrypoint: ["python", "examples/trends_agent.py"]
+    entrypoint: ["python", "-m", "apps.data_analyst.examples.trends_agent"]
     command: []
     environment:
       <<: *gold-env

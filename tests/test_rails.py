@@ -5,7 +5,6 @@ import os
 
 import httpx
 import pytest
-
 import stack
 from test_end_to_end import DB_URL, _db_available
 

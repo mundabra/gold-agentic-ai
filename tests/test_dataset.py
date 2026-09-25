@@ -1,14 +1,13 @@
 import json
 
 import pytest
-
 from test_end_to_end import _db_available
 
 pytestmark = pytest.mark.skipif(not _db_available(), reason="needs Postgres with deploy/postgres/*.sql loaded")
 
 
 def test_dataset_uses_the_production_prompt_and_refuses_eval_questions(tmp_path):
-    from gold import dataset, sql_model
+    from apps.data_analyst import dataset, sql_model
 
     pairs = tmp_path / "pairs.jsonl"
     rows = [
@@ -31,11 +30,11 @@ def test_dataset_uses_the_production_prompt_and_refuses_eval_questions(tmp_path)
 
 
 def test_dry_run_refuses_runaway_queries(monkeypatch):
-    from gold import config, db
-    from gold.guards import UnsafeQuery
+    from apps.data_analyst import db, settings
+    from apps.data_analyst.guards import UnsafeQuery
 
     cross_join = "SELECT COUNT(*) FROM invoice_line a, invoice_line b, invoice_line c"
-    monkeypatch.setattr(config, "MAX_QUERY_COST", 1_000_000)
+    monkeypatch.setattr(settings, "MAX_QUERY_COST", 1_000_000)
     with pytest.raises(UnsafeQuery, match="too expensive"):
         db.run_query(cross_join)
     assert db.run_query("SELECT COUNT(*) FROM invoice")["rows"] == [[412]]

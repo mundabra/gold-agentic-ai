@@ -1,0 +1,23 @@
+# Sales copilot: a rep's accounts, what to offer, and follow-ups the rep approves.
+name: sales-copilot
+title: Sales copilot
+description: Your accounts at a glance. Briefs before a call, who needs attention, what to offer next, and follow-ups logged only when you approve them.
+instructions: instructions.md
+read_only: false           # it can log activities, but only through tools that ask for approval
+
+# The Account agent is this app's own; the Definitions and SQL agents come from Talk to your Data.
+agents: [Account agent, Definitions agent, SQL agent]
+
+components:
+  account-agent: apps.sales_copilot.agents.account_agent
+  mcp-crm: apps.sales_copilot.tools.crm_tools
+
+scripted: apps.sales_copilot.scripted
+
+ui:
+  placeholder: Which of my accounts need attention?
+  examples:
+    - Which of my accounts need attention?
+    - Brief me on Luís Gonçalves
+    - What should I offer Luís Gonçalves next?
+    - "Log a call with Luís Gonçalves: interested in Latin jazz, follow up in two weeks"

@@ -70,11 +70,11 @@ gold bench --model provider/good-sql-model --concurrency 1,4,8 \
 | 8           | 2.321 s | 4.95 s   | 1.62  | 497.1        | 0      |
 ```
 
-<sub>Example output: one small run (16 requests per level) against one SQL model on a shared hosted API, so the numbers move between runs. For a larger measured run see [evals/PERFORMANCE.md](../evals/PERFORMANCE.md). The cost column (per 1,000 SQL generations) appears when you pass prices.</sub>
+<sub>Example output: one small run (16 requests per level) against one SQL model on a shared hosted API, so the numbers move between runs. For a larger measured run see [apps/data_analyst/evals/PERFORMANCE.md](../apps/data_analyst/evals/PERFORMANCE.md). The cost column (per 1,000 SQL generations) appears when you pass prices.</sub>
 
 ## 4. Write your own evaluation questions
 
-`evals/questions.jsonl` has 20 questions about the sample data. For your own data, write 30 to 100 questions your users actually ask, each with a reference query an analyst has approved:
+`apps/data_analyst/evals/questions.jsonl` has 20 questions about the sample data. For your own data, write 30 to 100 questions your users actually ask, each with a reference query an analyst has approved:
 
 ```json
 {"id": "q01", "question": "What was revenue by region last quarter?", "sql": "SELECT ..."}

@@ -4,7 +4,7 @@ GOLD treats accuracy as something you measure before every change, not something
 
 ## `gold eval`: quality
 
-Each question in `evals/questions.jsonl` has a reference query that an analyst has checked:
+Each question in `apps/data_analyst/evals/questions.jsonl` has a reference query that an analyst has checked:
 
 ```json
 {"id": "q03", "question": "How many active customers do we have?", "sql": "SELECT COUNT(DISTINCT customer_id) FROM invoice WHERE ..."}
@@ -66,4 +66,4 @@ It sends real GOLD prompts (question + schema) to the SQL model at each concurre
 
 ## `scripts/aiperf.sh`: serving metrics
 
-For time to first token, per-token latency, throughput at load and goodput against a latency target, `scripts/aiperf.sh` runs [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) with GOLD's real SQL requests. See [stage 3](stage-3-own-inference.md#4-benchmark-serving-with-aiperf) for the metrics, and [evals/PERFORMANCE.md](../evals/PERFORMANCE.md) for a measured run.
+For time to first token, per-token latency, throughput at load and goodput against a latency target, `scripts/aiperf.sh` runs [NVIDIA AIPerf](https://github.com/ai-dynamo/aiperf) with GOLD's real SQL requests. See [stage 3](stage-3-own-inference.md#4-benchmark-serving-with-aiperf) for the metrics, and [apps/data_analyst/evals/PERFORMANCE.md](../apps/data_analyst/evals/PERFORMANCE.md) for a measured run.

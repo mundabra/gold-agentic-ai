@@ -19,40 +19,24 @@ LLM_BASE_URL = env("GOLD_LLM_BASE_URL", "http://litellm:4000/v1")
 LLM_API_KEY = env("GOLD_LLM_API_KEY", "sk-gold-local")
 
 # Model names as the endpoint knows them. With LiteLLM these are aliases
-# defined in deploy/litellm/config.yaml.
+# defined in deploy/litellm/config.yaml. Apps can add their own (the data app's gold-sql).
 ORCHESTRATOR_MODEL = env("GOLD_ORCHESTRATOR_MODEL", "gold-general")
 AGENT_MODEL = env("GOLD_AGENT_MODEL", "gold-general")
-SQL_MODEL = env("GOLD_SQL_MODEL", "gold-sql")
 
-# The SQL model can be a general model or a small fine-tuned one. A fine-tuned
-# model must be called with the exact prompt it was trained on, so both the
-# system prompt and whether the schema is appended are configurable.
-SQL_SYSTEM_PROMPT = env("GOLD_SQL_SYSTEM_PROMPT", "")
-SQL_INCLUDE_SCHEMA = env_bool("GOLD_SQL_INCLUDE_SCHEMA", True)
-# Whether business definitions are added to the question sent to the SQL model.
-# Turn off for a fine-tuned model that was trained on bare questions only.
-SQL_PASS_DEFINITIONS = env_bool("GOLD_SQL_PASS_DEFINITIONS", True)
-# Reasoning models spend tokens thinking before they answer; leave them room.
-SQL_MAX_TOKENS = int(env("GOLD_SQL_MAX_TOKENS", "2048"))
-
-# Extra fields sent with every model request, as JSON: model-specific switches such as
-# turning reasoning off ({"chat_template_kwargs": {"enable_thinking": false}} for
-# NVIDIA Nemotron on vLLM). One for the SQL model, one for the orchestrator and agents.
-SQL_EXTRA_BODY = json.loads(env("GOLD_SQL_EXTRA_BODY", "") or "{}")
+# Extra fields sent with every orchestrator and agent model request, as JSON: model-specific
+# switches such as turning reasoning off ({"chat_template_kwargs": {"enable_thinking": false}}
+# for NVIDIA Nemotron on vLLM). Apps can have their own (the data app's SQL model does).
 AGENT_EXTRA_BODY = json.loads(env("GOLD_AGENT_EXTRA_BODY", "") or "{}")
 
+# Apps to serve (see gold/apps.py): empty means every app found. Extra Python packages
+# to look for apps in, so your own apps can live outside this repository.
+APPS = [a.strip() for a in env("GOLD_APPS", "").split(",") if a.strip()]
+APP_PACKAGES = [p.strip() for p in env("GOLD_APP_PACKAGES", "").split(",") if p.strip()]
+DEFAULT_APP = env("GOLD_DEFAULT_APP", "")
+
+# The reference deployment's database. Apps read it through their own settings and
+# may point elsewhere; the platform itself only uses it for friendly error messages.
 DATABASE_URL = env("GOLD_DATABASE_URL", "postgresql://gold_reader:gold_reader@postgres:5432/gold")
-# The glossary can live in its own small database, so your business data can
-# stay on a read-only replica you cannot add tables to.
-GLOSSARY_DATABASE_URL = env("GOLD_GLOSSARY_DATABASE_URL", "") or DATABASE_URL
-# Schemas the SQL agent may see and query.
-# SQL dialect used to parse and validate queries (any SQLGlot dialect name).
-SQL_DIALECT = env("GOLD_SQL_DIALECT", "postgres")
-DB_SCHEMAS = [s.strip() for s in env("GOLD_DB_SCHEMAS", "public").split(",") if s.strip()]
-MAX_ROWS = int(env("GOLD_MAX_ROWS", "50"))
-# Dry run: queries whose planner cost estimate is above this are refused before they run. 0 turns it off.
-MAX_QUERY_COST = float(env("GOLD_MAX_QUERY_COST", "1000000"))
-PII_COLUMNS = {c.strip().lower() for c in env("GOLD_PII_COLUMNS", "email,phone,fax,address").split(",") if c.strip()}
 
 # Conversation memory: a SQLite file path (default: a file in the temp folder),
 # or a SQLAlchemy URL for a shared database, e.g. postgresql+asyncpg://...
@@ -62,8 +46,6 @@ REGISTRY_URL = env("GOLD_REGISTRY_URL", "http://registry:8000")
 # Shared secret agents must present to register. Empty means open registration
 # (fine on a private network, not beyond it).
 REGISTRY_TOKEN = env("GOLD_REGISTRY_TOKEN", "")
-DATA_MCP_URL = env("GOLD_DATA_MCP_URL", "http://mcp-data:8000/mcp")
-GLOSSARY_MCP_URL = env("GOLD_GLOSSARY_MCP_URL", "http://mcp-glossary:8000/mcp")
 
 # The URL other services use to reach this process; goes into its Agent Card.
 PUBLIC_URL = env("GOLD_PUBLIC_URL", "http://localhost:8000")
@@ -94,7 +76,7 @@ RAILS_FAIL_OPEN = env_bool("GOLD_RAILS_FAIL_OPEN", False)
 RAILS_TIMEOUT = float(env("GOLD_RAILS_TIMEOUT", "20"))
 
 # Feedback loop (see gold/feedback.py): an insert-only login for the orchestrator,
-# and a curator login for analysts reviewing feedback. Empty turns feedback off.
+# and a curator login for the people reviewing feedback. Empty turns feedback off.
 FEEDBACK_DATABASE_URL = env("GOLD_FEEDBACK_DATABASE_URL", "")
 CURATOR_DATABASE_URL = env("GOLD_CURATOR_DATABASE_URL", "")
 

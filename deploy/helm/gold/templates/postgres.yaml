@@ -19,6 +19,7 @@ stringData:
   readerPassword: {{ .Values.postgres.readerPassword | quote }}
   feedbackPassword: {{ .Values.postgres.feedbackPassword | quote }}
   curatorPassword: {{ .Values.postgres.curatorPassword | quote }}
+  crmPassword: {{ .Values.postgres.crmPassword | quote }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -56,6 +57,8 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ $name }}-postgres, key: feedbackPassword } }
             - name: GOLD_CURATOR_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ $name }}-postgres, key: curatorPassword } }
+            - name: GOLD_CRM_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $name }}-postgres, key: crmPassword } }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "gold_admin", "-d", "gold"] }

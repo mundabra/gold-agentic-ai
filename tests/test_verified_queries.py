@@ -1,14 +1,13 @@
 import json
 
 import pytest
-
 from test_end_to_end import _db_available
 
 pytestmark = pytest.mark.skipif(not _db_available(), reason="needs Postgres with deploy/postgres/*.sql loaded")
 
 
 def test_the_closest_approved_queries_come_first():
-    from gold import db
+    from apps.data_analyst import db
 
     found = db.search_verified_queries("What was our revenue by country last year?")
     assert found and "country" in found[0]["question"].lower()
@@ -16,13 +15,13 @@ def test_the_closest_approved_queries_come_first():
 
 
 def test_every_shipped_example_is_valid_and_held_out():
-    from gold import semantic
+    from apps.data_analyst import semantic
 
     assert semantic.verify_queries() == []
 
 
 def test_an_example_that_leaks_an_evaluation_question_is_flagged(tmp_path):
-    from gold import db, semantic
+    from apps.data_analyst import db, semantic
 
     leaked = db.all_verified_queries()[0]["question"]
     evals = tmp_path / "questions.jsonl"

@@ -5,7 +5,7 @@ GOLD gives you three views of what happened:
 | View | Where | Use it for |
 |---|---|---|
 | **The answer's trace panel** | Chat UI and the `/api/ask` response (`calls`) | "How was *this* answer made?" (agents, tools, SQL, tokens, time) |
-| **Audit trail** | One JSON line per question on stdout (`gold.audit` logger), optionally a file (`GOLD_AUDIT_LOG`) | Who asked what, which SQL ran, how many rows came back, whether it was blocked |
+| **Audit trail** | One JSON line per question, and per approval decision, on stdout (`gold.audit` logger), optionally a file (`GOLD_AUDIT_LOG`) | Who asked what in which app, which tools and SQL ran, how many rows came back, whether it was blocked, which actions were proposed, approved or rejected |
 | **Distributed traces** | Any OpenTelemetry backend | Where time goes across services, and what failed where |
 
 ## Distributed tracing
@@ -47,14 +47,19 @@ On Kubernetes, set `tracing.otlpEndpoint` in the Helm values.
 Every question, answered or blocked, writes one record:
 
 ```json
-{"time": "2026-09-24T22:41:07.512+00:00", "trace_id": "95ccbd69fa45ca39418630dcd513cbe2",
- "session_id": "4f1c…", "user": null, "question": "What was our revenue by country last year?",
- "blocked": false, "error": null, "agents": ["Definitions agent", "SQL agent"],
+{"event": "question", "time": "2026-09-24T22:41:07.512+00:00", "trace_id": "95ccbd69fa45ca39418630dcd513cbe2",
+ "app": "data-analyst", "session_id": "4f1c…", "user": "finance@example.com",
+ "question": "What was our revenue by country last year?", "blocked": false, "error": null,
+ "agents": ["Definitions agent", "SQL agent"],
+ "tools": ["Definitions agent: search_glossary", "Definitions agent: find_verified_queries",
+           "SQL agent: generate_sql", "SQL agent: run_sql"],
  "queries": [{"sql": "SELECT i.billing_country …", "rows": 21, "refused": null}],
- "tokens": 7672, "model_requests": 10, "elapsed_ms": 11350}
+ "actions_proposed": [], "tokens": 7672, "model_requests": 10, "elapsed_ms": 11350}
 ```
+
+Approving or rejecting a proposed action writes an `"event": "action"` record with the decision, the user, the tool, its arguments and the result ([approvals](approvals.md#audit)).
 
 - It goes to stdout as a single JSON line, so any log pipeline can collect it. `GOLD_AUDIT_LOG` also appends it to a file.
 - `trace_id` links the record to its full trace.
-- `user` fills in once identity is configured (on the [roadmap](../README.md#roadmap)).
+- `user` fills in once identity is configured ([identity](identity.md)).
 - The record contains the question and the SQL on purpose. Store it where your audit policy says those belong.

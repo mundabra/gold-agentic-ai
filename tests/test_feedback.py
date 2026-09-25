@@ -5,7 +5,6 @@ import os
 import httpx
 import psycopg
 import pytest
-
 import stack
 from test_end_to_end import DB_URL, _db_available
 
@@ -44,7 +43,8 @@ def test_unsafe_corrections_are_refused(stack_with_feedback):
 
 
 def test_a_correction_becomes_a_verified_query(stack_with_feedback):
-    from gold import config, db, feedback
+    from apps.data_analyst import curation, db
+    from gold import config, feedback
 
     corrected = "SELECT billing_country, COUNT(*) AS invoices FROM invoice GROUP BY billing_country ORDER BY invoices DESC LIMIT 5"
     resp = httpx.post(f"{BASE}/api/feedback", json={"answer_id": "a1", "question": NEW_QUESTION, "sql": "SELECT 1",
@@ -55,12 +55,12 @@ def test_a_correction_becomes_a_verified_query(stack_with_feedback):
     config.CURATOR_DATABASE_URL = CURATOR_URL
     [item] = [i for i in feedback.list_items() if i["question"] == NEW_QUESTION]
     assert item["rating"] == "down" and item["corrected_sql"] == corrected
-    result = feedback.promote(item["id"], "analyst@example.com")
+    result = curation.promote(item["id"], "analyst@example.com")
     assert result["problems"] == []
     assert any(v["question"] == NEW_QUESTION for v in db.all_verified_queries())
     assert feedback.list_items("promoted")[0]["id"] == item["id"]
     with pytest.raises(feedback.FeedbackError):
-        feedback.promote(item["id"], "analyst@example.com")  # already promoted
+        curation.promote(item["id"], "analyst@example.com")  # already promoted
 
 
 def test_the_feedback_login_cannot_read_and_the_query_login_cannot_see_feedback(stack_with_feedback):

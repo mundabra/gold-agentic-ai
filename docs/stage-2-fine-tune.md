@@ -10,7 +10,7 @@ Only the **SQL model** is fine-tuned. The orchestrator and agents keep a general
 
 ## 1. Collect question/SQL pairs
 
-Good sources: queries analysts have already approved, BI dashboards (each tile is a question and a query), and query logs you are allowed to use. Start from `finetune/seed_pairs.jsonl` (30 examples) to see the format:
+Good sources: queries analysts have already approved, BI dashboards (each tile is a question and a query), and query logs you are allowed to use. Start from `apps/data_analyst/finetune/seed_pairs.jsonl` (30 examples) to see the format:
 
 ```json
 {"question": "Which city had the highest revenue overall?", "sql": "SELECT ... "}
@@ -22,18 +22,18 @@ A real fine-tune needs hundreds to a few thousand pairs. Paraphrase each questio
 
 ```bash
 docker compose up -d postgres          # the builder runs every query against the database
-gold dataset finetune/seed_pairs.jsonl --out finetune/data
+gold dataset apps/data_analyst/finetune/seed_pairs.jsonl --out results/finetune-data
 ```
 
 ```text
-27 training and 3 validation examples written to finetune/data/
+27 training and 3 validation examples written to results/finetune-data/
 ```
 
 The builder:
 
 - **runs every query** and drops the ones that fail;
 - **refuses questions from the evaluation set**, so `gold eval` stays an honest test;
-- writes each example with **exactly the prompt GOLD sends in production** (`gold/sql_model.py`): same system prompt, same schema format, same definitions block.
+- writes each example with **exactly the prompt GOLD sends in production** (`apps/data_analyst/sql_model.py`): same system prompt, same schema format, same definitions block.
 
 Build the dataset with the same `GOLD_SQL_*` settings you will serve with, because they shape the prompt. `--no-definitions` builds examples without the definitions block.
 
@@ -47,15 +47,15 @@ GOLD_SQL_PASS_DEFINITIONS=false      # only if you trained on bare questions
 
 ## 3. Train a LoRA adapter
 
-`finetune/train_lora.py` is a reference recipe with Hugging Face TRL and PEFT for one GPU. It is not run in CI.
+`apps/data_analyst/finetune/train_lora.py` is a reference recipe with Hugging Face TRL and PEFT for one GPU. It is not run in CI.
 
 ```bash
 pip install "trl>=0.20" peft datasets accelerate
-python finetune/train_lora.py --base-model Qwen/Qwen2.5-Coder-7B-Instruct \
-  --data finetune/data --out adapters/gold-sql
+python apps/data_analyst/finetune/train_lora.py --base-model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --data results/finetune-data --out adapters/gold-sql
 ```
 
-You can also upload `finetune/data/*.jsonl` (chat-format JSONL) to any fine-tuning service.
+You can also upload `results/finetune-data/*.jsonl` (chat-format JSONL) to any fine-tuning service.
 
 Good starting points: a code-focused instruct model of 7B–32B parameters, LoRA rank 16, 2–3 epochs, learning rate 2e-4. Watch the validation loss: if it rises while training loss falls, the model is memorising rather than learning.
 

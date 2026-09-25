@@ -38,7 +38,7 @@ jobs:
             ${{ steps.meta.outputs.image }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=GOLD: Governed Open Language-to-Data
+            org.opencontainers.image.description=GOLD: an enterprise agentic AI reference architecture
             org.opencontainers.image.licenses=Apache-2.0
       - uses: docker/build-push-action@v6
         with:

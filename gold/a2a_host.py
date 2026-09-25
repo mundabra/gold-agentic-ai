@@ -13,7 +13,13 @@ from contextlib import AsyncExitStack
 
 import httpx
 import uvicorn
-from a2a.helpers import get_message_text, new_data_part, new_task_from_user_message, new_text_message, new_text_part
+from a2a.helpers import (
+    get_message_text,
+    new_data_part,
+    new_task_from_user_message,
+    new_text_message,
+    new_text_part,
+)
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.request_handlers import DefaultRequestHandler

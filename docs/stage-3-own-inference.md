@@ -127,7 +127,7 @@ The script writes the production SQL requests as AIPerf payloads (`gold aiperf-p
 | Output tok/s | Total throughput: what one GPU setup can serve. |
 | Reasoning share | Tokens spent thinking rather than answering. A fine-tuned model that does not reason brings this near zero. |
 
-A measured baseline on a hosted API is in [evals/PERFORMANCE.md](../evals/PERFORMANCE.md).
+A measured baseline on a hosted API is in [apps/data_analyst/evals/PERFORMANCE.md](../apps/data_analyst/evals/PERFORMANCE.md).
 
 ## Tuning notes
 

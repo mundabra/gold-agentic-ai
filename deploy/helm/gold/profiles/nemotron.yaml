@@ -77,6 +77,6 @@ vllm:
         - "nemotron_v3"
 
 # Turn reasoning off for SQL generation: with agreed definitions in the prompt it rarely
-# helps, and it makes answers slower (see evals/PERFORMANCE.md). Measure it on your data.
+# helps, and it makes answers slower (see apps/data_analyst/evals/PERFORMANCE.md). Measure it on your data.
 sql:
   extraBody: '{"chat_template_kwargs": {"enable_thinking": false}}'

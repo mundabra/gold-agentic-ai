@@ -3,7 +3,7 @@
     python tests/stack.py            # scripted test model, no API key needed
     GOLD_LLM_BASE_URL=... GOLD_LLM_API_KEY=... python tests/stack.py --real-model
 
-Needs Postgres with deploy/postgres/*.sql loaded; set GOLD_DATABASE_URL.
+Needs Postgres with deploy/postgres/* loaded; set GOLD_DATABASE_URL.
 """
 
 import argparse
@@ -24,6 +24,8 @@ PORTS = {
     "mcp-glossary": 18002,
     "sql-agent": 18003,
     "definitions-agent": 18004,
+    "mcp-crm": 18005,
+    "account-agent": 18006,
     "orchestrator": 18080,
 }
 
@@ -38,6 +40,8 @@ def base_env(real_model: bool) -> dict:
     env["GOLD_REGISTRY_URL"] = f"http://127.0.0.1:{PORTS['registry']}"
     env["GOLD_DATA_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-data']}/mcp"
     env["GOLD_GLOSSARY_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-glossary']}/mcp"
+    env["GOLD_CRM_MCP_URL"] = f"http://127.0.0.1:{PORTS['mcp-crm']}/mcp"
+    env.setdefault("GOLD_CRM_DATABASE_URL", env["GOLD_DATABASE_URL"].replace("gold_reader:gold_reader", "gold_crm_writer:gold_crm_writer"))
     env["PYTHONUNBUFFERED"] = "1"
     return env
 
@@ -74,13 +78,15 @@ def start(real_model: bool = False, log_dir: Path | None = None) -> list[subproc
     launch("mcp-glossary", [py, "-m", "gold.cli", "serve", "mcp-glossary"], "/healthz")
     launch("sql-agent", [py, "-m", "gold.cli", "serve", "sql-agent"], "/healthz")
     launch("definitions-agent", [py, "-m", "gold.cli", "serve", "definitions-agent"], "/healthz")
+    launch("mcp-crm", [py, "-m", "gold.cli", "serve", "mcp-crm"], "/healthz")
+    launch("account-agent", [py, "-m", "gold.cli", "serve", "account-agent"], "/healthz")
     launch("orchestrator", [py, "-m", "gold.cli", "serve", "orchestrator"], "/healthz")
 
-    # Wait until both specialists have registered.
+    # Wait until every specialist has registered.
     deadline = time.time() + 30
     while time.time() < deadline:
         names = {a["name"] for a in httpx.get(f"http://127.0.0.1:{PORTS['registry']}/agents").json()}
-        if {"SQL agent", "Definitions agent"} <= names:
+        if {"SQL agent", "Definitions agent", "Account agent"} <= names:
             return procs
         time.sleep(0.5)
     stop(procs)
@@ -103,6 +109,7 @@ if __name__ == "__main__":
     parser.add_argument("--real-model", action="store_true", help="use GOLD_LLM_BASE_URL instead of the scripted test model")
     args = parser.parse_args()
     running = start(real_model=args.real_model)
+    signal.signal(signal.SIGTERM, signal.default_int_handler)  # stop the services on kill, too
     print(f"GOLD is running: http://127.0.0.1:{PORTS['orchestrator']}  (Ctrl+C to stop)")
     try:
         signal.pause()

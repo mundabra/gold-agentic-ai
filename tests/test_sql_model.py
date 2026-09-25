@@ -1,4 +1,5 @@
-from gold import config, sql_model
+from apps.data_analyst import settings, sql_model
+from gold import config
 from gold.orchestrator.a2a_tools import tool_name
 
 
@@ -17,8 +18,8 @@ def test_prompt_contract_is_configurable(monkeypatch):
     assert "revenue = price x qty" in msgs[1]["content"]
 
     # A fine-tuned model trained on bare questions gets exactly its training prompt.
-    monkeypatch.setattr(config, "SQL_SYSTEM_PROMPT", "You are a SQL assistant.")
-    monkeypatch.setattr(config, "SQL_PASS_DEFINITIONS", False)
+    monkeypatch.setattr(settings, "SQL_SYSTEM_PROMPT", "You are a SQL assistant.")
+    monkeypatch.setattr(settings, "SQL_PASS_DEFINITIONS", False)
     msgs = sql_model.messages("Revenue by country?", "revenue = price x qty")
     assert msgs == [
         {"role": "system", "content": "You are a SQL assistant."},
@@ -47,7 +48,7 @@ def test_extra_body_reaches_the_sql_model_request(monkeypatch):
 
     fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=fake_create)))
     monkeypatch.setattr(llm, "client", lambda: fake_client)
-    monkeypatch.setattr(config, "SQL_EXTRA_BODY", {"chat_template_kwargs": {"enable_thinking": False}})
+    monkeypatch.setattr(settings, "SQL_EXTRA_BODY", {"chat_template_kwargs": {"enable_thinking": False}})
     sql, usage = asyncio.run(sql_model.generate("How many tracks?"))
     assert sql == "SELECT 1" and usage.total_tokens == 15
     assert sent["extra_body"] == {"chat_template_kwargs": {"enable_thinking": False}}

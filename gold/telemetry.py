@@ -32,7 +32,9 @@ def setup(component: str) -> bool:
     try:
         from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
         from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
         from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
         from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
         from opentelemetry.sdk.resources import Resource

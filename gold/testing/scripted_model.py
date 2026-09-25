@@ -2,62 +2,34 @@
 
 It lets the whole system (orchestrator, A2A agents, MCP tools, Postgres) run
 end to end with no API key and no GPU: for the automated tests, and for a
-first look at GOLD before you connect a real model. It follows the same
-tool-calling steps a real model is instructed to follow and returns canned SQL,
-so only the example questions in the chat UI get meaningful answers.
+first look at GOLD before you connect a real model. Each app supplies its own
+canned steps (the `scripted` module in its app.yaml), which follow the same
+tool calls a real model is instructed to make, so only the example questions
+in the chat UI get meaningful answers.
 
     gold serve scripted-model
 """
 
+import importlib
 import json
 import time
 import uuid
+from dataclasses import dataclass
+from functools import cache
 
 import uvicorn
 from fastapi import FastAPI, Request
 
 app = FastAPI(title="GOLD scripted test model")
 
-CANNED_SQL = [
-    (
-        ("lifetime value", "top 5 customers"),
-        "SELECT c.first_name || ' ' || c.last_name AS customer, c.country, "
-        "ROUND(SUM(il.unit_price * il.quantity), 2) AS lifetime_value "
-        "FROM customer c JOIN invoice i ON i.customer_id = c.customer_id "
-        "JOIN invoice_line il ON il.invoice_id = i.invoice_id "
-        "GROUP BY c.customer_id, c.first_name, c.last_name, c.country "
-        "ORDER BY lifetime_value DESC LIMIT 5",
-    ),
-    (
-        ("genre",),
-        "SELECT g.name AS genre, ROUND(SUM(il.unit_price * il.quantity), 2) AS revenue "
-        "FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id "
-        "JOIN track t ON t.track_id = il.track_id JOIN genre g ON g.genre_id = t.genre_id "
-        "WHERE EXTRACT(YEAR FROM i.invoice_date) = (SELECT MAX(EXTRACT(YEAR FROM invoice_date)) FROM invoice) "
-        "GROUP BY g.name ORDER BY revenue DESC LIMIT 1",
-    ),
-    (
-        ("active customers",),
-        "SELECT COUNT(DISTINCT customer_id) AS active_customers FROM invoice "
-        "WHERE invoice_date > (SELECT MAX(invoice_date) FROM invoice) - INTERVAL '12 months'",
-    ),
-    (
-        ("revenue by country",),
-        "SELECT i.billing_country AS country, ROUND(SUM(il.unit_price * il.quantity), 2) AS revenue "
-        "FROM invoice_line il JOIN invoice i ON i.invoice_id = il.invoice_id "
-        "WHERE EXTRACT(YEAR FROM i.invoice_date) = (SELECT MAX(EXTRACT(YEAR FROM invoice_date)) FROM invoice) "
-        "GROUP BY i.billing_country ORDER BY revenue DESC",
-    ),
-]
-DEFAULT_SQL = "SELECT COUNT(*) AS invoices FROM invoice"
 
-
-def _tool_call(name: str, arguments: dict) -> dict:
-    return {
+def tool_call(name: str, arguments: dict) -> dict:
+    """A reply that calls one tool."""
+    return {"tool_calls": [{
         "id": "call_" + uuid.uuid4().hex[:12],
         "type": "function",
         "function": {"name": name, "arguments": json.dumps(arguments)},
-    }
+    }]}
 
 
 def _text(content) -> str:
@@ -68,17 +40,22 @@ def _text(content) -> str:
 
 
 def _history(messages: list[dict]) -> tuple[str, list[tuple[str, str]]]:
-    """Return the first user message and (tool name, tool output) pairs so far."""
-    user = next((_text(m.get("content")) for m in messages if m.get("role") == "user"), "")
+    """Return the latest user message and the (tool name, tool output) pairs since it.
+
+    Earlier turns of the conversation (session memory) are ignored, so each question
+    follows its own steps."""
+    last = max((i for i, m in enumerate(messages) if m.get("role") == "user"), default=-1)
+    user = _text(messages[last].get("content")) if last >= 0 else ""
     names = {}
     for m in messages:
         for call in m.get("tool_calls") or []:
             names[call["id"]] = call["function"]["name"]
-    done = [(names.get(m.get("tool_call_id"), "?"), _text(m.get("content"))) for m in messages if m.get("role") == "tool"]
+    done = [(names.get(m.get("tool_call_id"), "?"), _text(m.get("content")))
+            for m in messages[last + 1:] if m.get("role") == "tool"]
     return user, done
 
 
-def _markdown_table(result_json: str) -> str:
+def markdown_table(result_json: str) -> str:
     try:
         result = json.loads(result_json)
     except ValueError:
@@ -91,49 +68,39 @@ def _markdown_table(result_json: str) -> str:
     return "\n".join(lines)
 
 
+@dataclass
+class Turn:
+    """One request to the model, as the canned replies see it."""
+
+    system: str
+    user: str  # the latest user message
+    tools: set[str]
+    called: list[str]  # tools called so far, in order
+    output: dict[str, str]  # tool name -> its latest output
+
+    @classmethod
+    def from_body(cls, body: dict) -> "Turn":
+        messages = body.get("messages", [])
+        system = next((_text(m.get("content")) for m in messages if m.get("role") in ("system", "developer")), "")
+        user, done = _history(messages)
+        tools = {t["function"]["name"] for t in body.get("tools") or []}
+        return cls(system=system, user=user, tools=tools, called=[n for n, _ in done], output=dict(done))
+
+
+@cache
+def _app_replies() -> list:
+    from gold import apps
+
+    return [importlib.import_module(a.scripted) for a in apps.all_apps().values() if a.scripted]
+
+
 def decide(body: dict) -> dict:
-    messages = body.get("messages", [])
-    tools = {t["function"]["name"] for t in body.get("tools") or []}
-    user, done = _history(messages)
-    called = [name for name, _ in done]
-    output = dict(done)
-
-    if "ask_definitions_agent" in tools:  # orchestrator
-        if "ask_definitions_agent" not in called:
-            return {"tool_calls": [_tool_call("ask_definitions_agent", {"request": f"Define the business terms in: {user}"})]}
-        if "ask_sql_agent" not in called:
-            request = f"Question: {user}\n\nDefinitions:\n{output['ask_definitions_agent']}"
-            return {"tool_calls": [_tool_call("ask_sql_agent", {"request": request})]}
-        return {"content": f"Here is the answer.\n\n{output['ask_sql_agent']}\n\nDefinition used:\n{output['ask_definitions_agent']}"}
-
-    if "search_glossary" in tools:  # definitions agent
-        if "search_glossary" not in called:
-            return {"tool_calls": [_tool_call("search_glossary", {"terms": user})]}
-        if "find_verified_queries" in tools and "find_verified_queries" not in called:
-            question = user.split(":", 1)[-1].strip()  # "Define the business terms in: <question>"
-            return {"tool_calls": [_tool_call("find_verified_queries", {"question": question})]}
-        matches = json.loads(output["search_glossary"]).get("matches", [])
-        bullets = [f"- **{m['term']}**: {m['definition']} (owner: {m['owner']})" for m in matches]
-        examples = json.loads(output.get("find_verified_queries") or "{}").get("examples", [])
-        if examples:
-            bullets.append("Approved example queries:")
-            bullets += [f"- {e['question']}: {e['sql']}" for e in examples]
-        return {"content": "\n".join(bullets) or "No agreed definition found."}
-
-    if "generate_sql" in tools:  # SQL agent
-        if "generate_sql" not in called:
-            return {"tool_calls": [_tool_call("generate_sql", {"question": user})]}
-        if "run_sql" not in called:
-            return {"tool_calls": [_tool_call("run_sql", {"sql": output["generate_sql"]})]}
-        return {"content": f"```sql\n{output['generate_sql']}\n```\n\n{_markdown_table(output['run_sql'])}"}
-
-    # No tools: this is the dedicated SQL model being asked for a query. Match on the
-    # question only, not on the definitions and examples appended to it.
-    lowered = user.split("\n\nBusiness definitions")[0].split("\n\nDefinitions")[0].lower()
-    for keywords, sql in CANNED_SQL:
-        if any(k in lowered for k in keywords):
-            return {"content": sql}
-    return {"content": DEFAULT_SQL}
+    turn = Turn.from_body(body)
+    for module in _app_replies():
+        reply = module.decide(turn)
+        if reply is not None:
+            return reply
+    return {"content": "The scripted model has no canned reply for this. Connect a real model to ask anything."}
 
 
 @app.post("/v1/chat/completions")
