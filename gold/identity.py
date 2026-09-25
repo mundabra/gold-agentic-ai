@@ -10,7 +10,7 @@ Modes:
   none   no identity (the default); rows are not filtered by user
   proxy  trust the user and groups headers set by a sign-in proxy in front of GOLD
          (for example oauth2-proxy, an API gateway or a service mesh)
-  oidc   validate a bearer JWT from your identity provider (needs gold-ai-agent[auth])
+  oidc   validate a bearer JWT from your identity provider (needs gold-agentic-ai[auth])
   demo   pick a user from GOLD_DEMO_USERS in the UI; for demonstrations only
 """
 
@@ -91,7 +91,7 @@ def _from_jwt(authorization: str) -> User:
     try:
         import jwt
     except ImportError as exc:
-        raise AuthError('OIDC sign-in needs: pip install "gold-ai-agent[auth]"') from exc
+        raise AuthError('OIDC sign-in needs: pip install "gold-agentic-ai[auth]"') from exc
     if not authorization.lower().startswith("bearer "):
         raise AuthError("Sign in: a bearer token is required.")
     token = authorization.split(" ", 1)[1]

@@ -3,7 +3,7 @@
     GOLD_SESSION_DB_URL unset         a local SQLite file: survives restarts, one orchestrator replica
     GOLD_SESSION_DB_URL=postgresql+asyncpg://user:pass@host/db
                                       a shared database: any number of orchestrator replicas
-                                      (pip install "gold-ai-agent[sessions]")
+                                      (pip install "gold-agentic-ai[sessions]")
 
 Specialist agents are stateless on purpose: the orchestrator passes them
 everything they need, so they scale freely.

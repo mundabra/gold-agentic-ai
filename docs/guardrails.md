@@ -76,7 +76,7 @@ docker compose --profile guardrails up --build
 helm upgrade --install gold deploy/helm/gold --set guardrails.enabled=true --set guardrails.model=gold-general
 ```
 
-The chart runs the guardrails server (image `ghcr.io/mundabra/gold-ai-agent-guardrails`), points GOLD at it, and sends the rails' policy checks to the same endpoint as GOLD. If you edit the rails, keep `deploy/guardrails/gold/` and `deploy/helm/gold/files/guardrails/` identical; CI checks this.
+The chart runs the guardrails server (image `ghcr.io/mundabra/gold-agentic-ai-guardrails`), points GOLD at it, and sends the rails' policy checks to the same endpoint as GOLD. If you edit the rails, keep `deploy/guardrails/gold/` and `deploy/helm/gold/files/guardrails/` identical; CI checks this.
 
 | Setting | Default | Purpose |
 |---|---|---|
