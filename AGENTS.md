@@ -6,6 +6,10 @@ Instructions for AI coding agents (and people) working on GOLD. Read this before
 
 GOLD is a vendor-neutral enterprise agentic AI reference architecture: **Governed · Observable · Layered · Deployable**. The **platform** (`gold/`) is the same for every app: an orchestrator built on the OpenAI Agents SDK (API, chat UI, identity, guardrails, memory, approvals, audit, feedback), a registry of A2A agents, and helpers to serve agents (A2A) and tools (MCP). **Apps** (`apps/`) are folders with an `app.yaml` manifest, instructions, agents and tools. Two sample apps: **Talk to your Data** (`apps/data_analyst`: Definitions and SQL agents, governed read-only text-to-SQL) and the **Sales copilot** (`apps/sales_copilot`: an Account agent with typed CRM tools; writes need human approval). Every model call goes to one OpenAI-compatible endpoint. See `docs/architecture.md`.
 
+## What to work on
+
+[ROADMAP.md](ROADMAP.md) is the plan: v0.6 (trust boundaries) first, in the order it lists, then v0.7. Each item is a GitHub issue with scope and acceptance criteria. Work on issues labelled `ready`; leave `needs-owner` ones alone. Don't start items from the "Later" or "Not planned" lists without the maintainer.
+
 ## Setup and checks
 
 ```bash
