@@ -4,7 +4,6 @@ __pycache__/
 .env
 results/
 .stack-logs/
-finetune/data/
 adapters/
 _reference/
 .DS_Store

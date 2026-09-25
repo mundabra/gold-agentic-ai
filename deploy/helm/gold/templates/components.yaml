@@ -2,9 +2,10 @@
 {{- $name := include "gold.fullname" . -}}
 {{- $all := deepCopy .Values.components -}}
 {{- if .Values.scriptedModel.enabled }}{{- $_ := set $all "scripted-model" (dict "replicas" 1) -}}{{- end }}
-{{- $needsDb := list "mcp-data" "mcp-glossary" -}}
-{{- $needsLlm := list "orchestrator" "sql-agent" "definitions-agent" -}}
-{{- $needsRegistry := list "registry" "sql-agent" "definitions-agent" -}}
+{{- $needsDb := list "mcp-data" "mcp-glossary" "mcp-crm" -}}
+{{- $needsLlm := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" -}}
+{{- $needsRegistry := list "registry" "sql-agent" "definitions-agent" "account-agent" -}}
+{{- $needsIdentity := list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "mcp-data" "mcp-crm" -}}
 {{- range $component, $cfg := $all }}
 apiVersion: apps/v1
 kind: Deployment
@@ -53,11 +54,15 @@ spec:
             - name: GOLD_GLOSSARY_DATABASE_URL
               valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: glossaryUrl, optional: true } }
             {{- end }}
+            {{- if eq $component "mcp-crm" }}
+            - name: GOLD_CRM_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: crmUrl, optional: true } }
+            {{- end }}
             {{- if eq $component "orchestrator" }}
             - name: GOLD_FEEDBACK_DATABASE_URL
               valueFrom: { secretKeyRef: { name: {{ include "gold.dbSecret" $root }}, key: feedbackUrl, optional: true } }
             {{- end }}
-            {{- if has $component (list "orchestrator" "sql-agent" "definitions-agent" "mcp-data") }}
+            {{- if has $component $needsIdentity }}
             - name: GOLD_IDENTITY_SECRET
               valueFrom: { secretKeyRef: { name: {{ include "gold.llmSecret" $root }}, key: identitySecret, optional: true } }
             {{- end }}

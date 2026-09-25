@@ -41,6 +41,9 @@ data:
   GOLD_REGISTRY_URL: "http://{{ $name }}-registry:8000"
   GOLD_DATA_MCP_URL: "http://{{ $name }}-mcp-data:8000/mcp"
   GOLD_GLOSSARY_MCP_URL: "http://{{ $name }}-mcp-glossary:8000/mcp"
+  GOLD_CRM_MCP_URL: "http://{{ $name }}-mcp-crm:8000/mcp"
+  GOLD_APPS: {{ .Values.apps.enabled | join "," | quote }}
+  GOLD_DEFAULT_APP: {{ .Values.apps.default | quote }}
 ---
 {{- if not .Values.llm.existingSecret }}
 apiVersion: v1
@@ -79,6 +82,11 @@ stringData:
   url: "postgresql://gold_reader:{{ .Values.postgres.readerPassword }}@{{ $name }}-postgres:5432/gold"
   {{- end }}
   glossaryUrl: {{ .Values.database.glossaryUrl | quote }}
+  {{- if .Values.database.crmUrl }}
+  crmUrl: {{ .Values.database.crmUrl | quote }}
+  {{- else if .Values.postgres.enabled }}
+  crmUrl: "postgresql://gold_crm_writer:{{ .Values.postgres.crmPassword }}@{{ $name }}-postgres:5432/gold"
+  {{- end }}
   {{- if .Values.feedback.enabled }}
   {{- if .Values.database.feedbackUrl }}
   feedbackUrl: {{ .Values.database.feedbackUrl | quote }}

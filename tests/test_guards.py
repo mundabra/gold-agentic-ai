@@ -1,6 +1,6 @@
 import pytest
 
-from gold.guards import UnsafeQuery, check_read_only, mask_rows
+from apps.data_analyst.guards import UnsafeQuery, check_read_only, mask_rows
 
 
 @pytest.mark.parametrize(

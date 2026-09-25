@@ -59,7 +59,7 @@ def list_agents() -> list[dict]:
             "description": a["card"].get("description", ""),
             "url": a["url"],
             "skills": [
-                {"name": s.get("name", ""), "description": s.get("description", "")}
+                {"name": s.get("name", ""), "description": s.get("description", ""), "tags": s.get("tags", [])}
                 for s in a["card"].get("skills", [])
             ],
             "seconds_since_heartbeat": round(now - a["last_seen"]),

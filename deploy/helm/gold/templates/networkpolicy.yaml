@@ -1,16 +1,19 @@
 {{- if .Values.networkPolicy.enabled }}
 {{- $root := . -}}
 {{- $name := include "gold.fullname" . -}}
-{{- /* Who may call each component. Egress is left open for model endpoints. */}}
+{{- /* Who may call each component. Egress is left open for model endpoints. The orchestrator
+       calls mcp-crm itself to run actions a person approved, and writes feedback to Postgres. */}}
 {{- $callers := dict
-      "registry"          (list "orchestrator" "sql-agent" "definitions-agent")
+      "registry"          (list "orchestrator" "sql-agent" "definitions-agent" "account-agent")
       "sql-agent"         (list "orchestrator")
       "definitions-agent" (list "orchestrator")
+      "account-agent"     (list "orchestrator")
       "mcp-data"          (list "sql-agent")
       "mcp-glossary"      (list "definitions-agent")
-      "postgres"          (list "mcp-data" "mcp-glossary")
-      "scripted-model"    (list "orchestrator" "sql-agent" "definitions-agent")
-      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent" "guardrails")
+      "mcp-crm"           (list "account-agent" "orchestrator")
+      "postgres"          (list "mcp-data" "mcp-glossary" "mcp-crm" "orchestrator")
+      "scripted-model"    (list "orchestrator" "sql-agent" "definitions-agent" "account-agent")
+      "gateway"           (list "orchestrator" "sql-agent" "definitions-agent" "account-agent" "guardrails")
       "guardrails"        (list "orchestrator") -}}
 {{- range $target, $from := $callers }}
 apiVersion: networking.k8s.io/v1

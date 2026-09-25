@@ -1,4 +1,9 @@
-"""Analyst orchestrator: the API and chat UI business users talk to."""
+"""The orchestrator: the API and chat UI people talk to, for every app.
+
+Each request names an app (app.yaml). The orchestrator runs an Agents SDK agent with that app's
+instructions, the registry agents the app may call as tools, and the platform's controls:
+identity, guardrails, conversation memory, approvals for actions, audit and feedback.
+"""
 
 import logging
 import re
@@ -21,33 +26,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from gold import audit, config, feedback, identity, llm, rails, runlog, sessions, telemetry
+from gold import approvals, apps, audit, config, feedback, identity, llm, rails, runlog, sessions, telemetry
 from gold.orchestrator.a2a_tools import discover, make_tool
 
 log = logging.getLogger("gold.orchestrator")
 
-INSTRUCTIONS = """You are GOLD, an analyst assistant that answers business questions from company data.
-Your tools are specialist agents found in the agent registry.
-
-For any question about business data:
-1. Ask the definitions agent what the business terms in the question mean.
-2. Ask the SQL agent. Give it the original question and paste the definitions and any approved
-   example queries word for word.
-3. Answer in this order:
-   - the answer itself, in one or two plain sentences
-   - the result table the SQL agent returned
-   - "Definition used:" with the definitions you relied on
-   - "SQL:" with the query, in a ```sql block
-Not every word needs an agreed definition. Business metrics and periods (revenue, active customer,
-last year) do; ordinary words that name data in the database (album, track, customer, country) do not.
-If the definitions agent has no definition for a term, still ask the SQL agent: it uses the plain
-meaning of the words and the database schema. Never refuse a data question for lack of a definition.
-Only report numbers the SQL agent returned. Never estimate or invent them.
-If a specialist is unavailable or fails, say so plainly.
-GOLD is read-only: never offer to change data."""
-
-REFUSAL = "GOLD is read-only, so I can't change or delete data. I can answer questions about it."
-RAILS_REFUSAL = "I can't help with that request. I answer questions about the company's business data."
+REFUSAL = "{title} is read-only, so I can't change or delete data. I can answer questions about it."
+RAILS_REFUSAL = "I can't help with that request."
 RAILS_ANSWER_WITHHELD = "The answer was withheld by the safety checks. Try rephrasing the question."
 
 _WRITE_INTENT = re.compile(
@@ -103,10 +88,16 @@ async def nemo_output_rails(ctx: RunContextWrapper, _agent: Agent, output) -> Gu
 
 class Question(BaseModel):
     question: str
+    app: str | None = None
     session_id: str | None = None
 
 
+class Decision(BaseModel):
+    ticket: str
+
+
 class Feedback(BaseModel):
+    app: str | None = None
     answer_id: str
     question: str
     sql: str | None = None
@@ -129,13 +120,30 @@ def healthz() -> dict:
     return {"status": "ok"}
 
 
+def _user(request: Request) -> identity.User | None:
+    try:
+        return identity.from_request(request.headers)
+    except identity.AuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+def _app(name: str | None) -> apps.App:
+    try:
+        return apps.get(name)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/apps")
+def list_apps() -> list[dict]:
+    """The apps this GOLD serves, for the app picker."""
+    return [a.public() for a in apps.all_apps().values()]
+
+
 @app.get("/api/identity")
 def whoami(request: Request) -> dict:
     """The signed-in user as GOLD sees them, and (in demo mode) the users to pick from."""
-    try:
-        user = identity.from_request(request.headers)
-    except identity.AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    user = _user(request)
     return {
         "mode": config.AUTH_MODE,
         "user": user.id if user else None,
@@ -153,20 +161,53 @@ def give_feedback(fb: Feedback, request: Request) -> dict:
     """A user rates an answer; it goes into the review queue for analysts (gold feedback list)."""
     if not feedback.enabled():
         raise HTTPException(status_code=503, detail="Feedback is not configured (GOLD_FEEDBACK_DATABASE_URL).")
+    user = _user(request)
+    target = _app(fb.app)
     try:
-        user = identity.from_request(request.headers)
-        feedback.submit(answer_id=fb.answer_id, question=fb.question, sql_ran=fb.sql, rating=fb.rating,
-                        comment=fb.comment, corrected_sql=fb.corrected_sql, user=user.id if user else None)
-    except identity.AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        check = target.hook("check_correction")
+        corrected = check(fb.corrected_sql) if check else fb.corrected_sql
+        feedback.submit(app=target.name, answer_id=fb.answer_id, question=fb.question, sql_ran=fb.sql,
+                        rating=fb.rating, comment=fb.comment, corrected_sql=corrected, user=user.id if user else None)
     except feedback.FeedbackError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"received": True}
 
 
 @app.get("/api/agents")
-async def agents() -> list[dict]:
-    return await discover()
+async def agents(app_name: str | None = None) -> list[dict]:
+    """Live agents in the registry; with ?app_name=, only those that app may call."""
+    registered = await discover()
+    return [a for a in registered if _app(app_name).serves(a)] if app_name else registered
+
+
+@app.post("/api/actions/approve")
+async def approve(decision: Decision, request: Request) -> dict:
+    """Run an action an agent proposed, now that the person who asked has approved it."""
+    user = _user(request)
+    try:
+        ticket = approvals.check_ticket(decision.ticket, user)
+    except approvals.ApprovalError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    try:
+        outcome = await approvals.execute(decision.ticket, user)
+    except Exception as exc:
+        audit.action(ticket, "failed", user=user.id if user else None, error=str(exc))
+        raise HTTPException(status_code=502, detail=f"The action could not be completed: {exc}") from exc
+    result = outcome["result"]
+    failed = isinstance(result, dict) and "error" in result
+    audit.action(ticket, "failed" if failed else "approved", user=user.id if user else None, result=result)
+    return {"status": "failed" if failed else "done", **outcome}
+
+
+@app.post("/api/actions/reject")
+def reject(decision: Decision, request: Request) -> dict:
+    user = _user(request)
+    try:
+        ticket = approvals.check_ticket(decision.ticket, user)
+    except approvals.ApprovalError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    audit.action(ticket, "rejected", user=user.id if user else None)
+    return {"status": "rejected", "action": {k: ticket[k] for k in ("id", "tool", "summary")}}
 
 
 @app.post("/api/ask")
@@ -174,30 +215,28 @@ async def ask(q: Question, request: Request) -> dict:
     question = q.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Ask a question.")
-    try:
-        user = identity.from_request(request.headers)
-    except identity.AuthError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    target = _app(q.app)
+    user = _user(request)
     if user is None and config.REQUIRE_IDENTITY:
         raise HTTPException(status_code=401, detail="Sign in to ask questions.")
     session_id = q.session_id or uuid.uuid4().hex
     answer_id = uuid.uuid4().hex
     # Conversations are private to their user: the same session id can't read someone else's.
-    session = sessions.get(f"{user.id}:{session_id}" if user else session_id)
+    session = sessions.get(f"{target.name}:{user.id}:{session_id}" if user else f"{target.name}:{session_id}")
     started = time.perf_counter()
 
     try:
-        registered = await discover()
+        registered = [entry for entry in await discover() if target.serves(entry)]
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"The agent registry is unreachable: {exc}") from exc
 
     agent = Agent(
-        name="GOLD orchestrator",
-        instructions=INSTRUCTIONS,
+        name=f"{target.title} orchestrator",
+        instructions=target.instructions,
         model=llm.model(config.ORCHESTRATOR_MODEL),
         model_settings=llm.settings(),
         tools=[make_tool(entry) for entry in registered],
-        input_guardrails=[read_only_guardrail] + ([nemo_input_rails] if rails.enabled() else []),
+        input_guardrails=([read_only_guardrail] if target.read_only else []) + ([nemo_input_rails] if rails.enabled() else []),
         output_guardrails=[nemo_output_rails] if rails.enabled() and config.RAILS_CHECK_ANSWERS else [],
     )
     context: dict = {"calls": [], "question": question, "user_token": identity.sign(user) if user else None}
@@ -209,23 +248,25 @@ async def ask(q: Question, request: Request) -> dict:
         if isinstance(tripped, OutputGuardrailTripwireTriggered):
             answer = RAILS_ANSWER_WITHHELD
         else:
-            answer = REFUSAL if blocked_by == "read-only guardrail" else RAILS_REFUSAL
+            answer = REFUSAL.format(title=target.title) if blocked_by == "read-only guardrail" else RAILS_REFUSAL
         calls = context["calls"] if isinstance(tripped, OutputGuardrailTripwireTriggered) else []
-        audit.record(session_id=session_id, question=question, blocked=True, calls=calls, usage={},
+        audit.record(app=target.name, session_id=session_id, question=question, blocked=True, calls=calls, usage={},
                      elapsed_ms=elapsed, blocked_by=blocked_by, user=user.id if user else None)
         return {
+            "app": target.name,
             "answer": answer,
             "blocked": True,
             "blocked_by": blocked_by,
             "session_id": session_id,
             "agents": [a["name"] for a in registered],
             "calls": calls,
+            "actions": [],
             "usage": {},
             "elapsed_ms": elapsed,
         }
     except Exception as exc:  # model errors, max turns: report them as JSON the UI can show
         log.exception("run failed")
-        audit.record(session_id=session_id, question=question, blocked=False, calls=context["calls"], usage={},
+        audit.record(app=target.name, session_id=session_id, question=question, blocked=False, calls=context["calls"], usage={},
                      elapsed_ms=round((time.perf_counter() - started) * 1000), error=str(exc),
                      user=user.id if user else None)
         raise HTTPException(status_code=502, detail=f"The answer could not be completed: {exc}") from exc
@@ -236,9 +277,11 @@ async def ask(q: Question, request: Request) -> dict:
         for key in ("model_requests", "input_tokens", "output_tokens", "total_tokens"):
             total[key] += int(call.get("usage", {}).get(key, 0))
     elapsed = round((time.perf_counter() - started) * 1000)
-    audit.record(session_id=session_id, question=question, blocked=False, calls=calls, usage=total, elapsed_ms=elapsed,
-                 user=user.id if user else None, answer_id=answer_id)
+    actions = approvals.pending(calls)
+    audit.record(app=target.name, session_id=session_id, question=question, blocked=False, calls=calls, usage=total,
+                 elapsed_ms=elapsed, user=user.id if user else None, answer_id=answer_id, actions=actions)
     return {
+        "app": target.name,
         "answer": str(result.final_output),
         "answer_id": answer_id,
         "user": user.id if user else None,
@@ -246,6 +289,7 @@ async def ask(q: Question, request: Request) -> dict:
         "session_id": session_id,
         "agents": [a["name"] for a in registered],
         "calls": calls,
+        "actions": actions,
         "usage": total,
         "elapsed_ms": elapsed,
     }

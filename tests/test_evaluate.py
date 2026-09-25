@@ -1,4 +1,4 @@
-from gold.evaluate import same_result
+from apps.data_analyst.evaluate import same_result
 
 
 def test_same_rows_in_any_order_and_column_order_match():

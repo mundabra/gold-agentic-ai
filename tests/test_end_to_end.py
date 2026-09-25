@@ -9,7 +9,6 @@ from pathlib import Path
 import httpx
 import psycopg
 import pytest
-
 import stack
 
 DB_URL = os.environ.get("GOLD_DATABASE_URL", "postgresql://gold_reader:gold_reader@localhost:55432/gold")
@@ -49,8 +48,12 @@ def ask(question: str) -> dict:
 
 
 def test_agents_are_discovered_from_the_registry(running_stack):
-    agents = httpx.get(f"http://127.0.0.1:{stack.PORTS['orchestrator']}/api/agents").json()
-    assert {a["name"] for a in agents} == {"SQL agent", "Definitions agent"}
+    base = f"http://127.0.0.1:{stack.PORTS['orchestrator']}"
+    agents = httpx.get(f"{base}/api/agents").json()
+    assert {a["name"] for a in agents} == {"SQL agent", "Definitions agent", "Account agent"}
+    # Each app sees only the agents its manifest (or an agent's app: tag) allows.
+    data_app = httpx.get(f"{base}/api/agents", params={"app_name": "data-analyst"}).json()
+    assert {a["name"] for a in data_app} == {"SQL agent", "Definitions agent"}
 
 
 def test_answer_uses_definitions_then_sql_and_matches_the_database(running_stack):
@@ -72,7 +75,7 @@ def test_answer_uses_definitions_then_sql_and_matches_the_database(running_stack
 
 
 def test_personal_data_cannot_be_read_even_with_tricks(running_stack):
-    from gold import db
+    from apps.data_analyst import db
 
     for sql in ["SELECT email FROM customer", "SELECT address AS a FROM customer", "SELECT CAST(email AS int) FROM customer"]:
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
@@ -99,9 +102,9 @@ def test_every_question_leaves_an_audit_record(running_stack):
     ask("What was our revenue by country last year?")
     ask("Drop the customer table")
     records = [json.loads(line) for line in AUDIT_LOG.read_text().splitlines()]
-    answered = next(r for r in records if r["question"] == "What was our revenue by country last year?")
+    answered = next(r for r in records if r.get("question") == "What was our revenue by country last year?")
     assert answered["blocked"] is False and answered["agents"] == ["Definitions agent", "SQL agent"]
     assert answered["queries"][0]["sql"].upper().startswith("SELECT") and answered["queries"][0]["rows"] > 0
     assert answered["tokens"] > 0 and answered["elapsed_ms"] >= 0
-    blocked = next(r for r in records if r["question"] == "Drop the customer table")
+    blocked = next(r for r in records if r.get("question") == "Drop the customer table")
     assert blocked["blocked"] is True and blocked["queries"] == []

@@ -115,6 +115,20 @@
   .rate form { display: grid; gap: 6px; width: 100%; }
   .rate textarea { font: 12.5px var(--sans); color: var(--ink); background: var(--raised); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 8px; min-height: 36px; }
   .rate textarea.sql { font-family: var(--mono); }
+  .apps { display: flex; gap: 4px; background: var(--raised); border: 1px solid var(--rule); border-radius: 999px; padding: 3px; }
+  .apps button { font: inherit; font-size: 13px; color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .apps button[aria-pressed="true"] { background: var(--gold); color: var(--surface); font-weight: 600; }
+  .action { border: 1px solid var(--gold); background: var(--gold-soft); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .action b { display: block; margin-bottom: 4px; }
+  .action dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0 8px; font-size: 13px; }
+  .action dt { color: var(--muted); }
+  .action dd { margin: 0; }
+  .action .buttons { display: flex; gap: 8px; }
+  .action button { font: inherit; font-size: 13px; border-radius: 6px; padding: 4px 14px; cursor: pointer; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
+  .action button.approve { background: var(--gold); border-color: var(--gold); color: var(--surface); font-weight: 600; }
+  .action .outcome { font-size: 13px; }
+  .action .outcome.ok { color: var(--ok); }
+  .action .outcome.no { color: var(--bad); }
   .totals { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; font-variant-numeric: tabular-nums; }
   .fail { color: var(--bad); font-size: 13px; }
   @media (prefers-reduced-motion: no-preference) { .thinking::after { content: " …"; animation: blink 1.2s infinite; } }
@@ -123,7 +137,8 @@
 </head>
 <body>
 <header>
-  <div class="brand"><b>GOLD</b><span>Ask in plain language. Get the governed number.</span></div>
+  <div class="brand"><b>GOLD</b><span id="tagline"></span></div>
+  <nav class="apps" id="apps" aria-label="Apps"></nav>
   <div class="agents" id="agents" aria-live="polite"></div>
   <div class="who" id="who"></div>
 </header>
@@ -131,31 +146,26 @@
   <section class="chat">
     <div class="log" id="log">
       <div class="empty" id="empty">
-        <h1>Ask a business question in plain English</h1>
-        <div>Answers use your company's agreed definitions, run read-only, and show the SQL behind every number.</div>
+        <h1 id="app-title">GOLD</h1>
+        <div id="app-description"></div>
         <div class="examples" id="examples"></div>
       </div>
     </div>
     <form id="form">
       <label for="q" class="hint" style="position:absolute;left:-9999px">Question</label>
-      <textarea id="q" rows="1" placeholder="What was our revenue by country last year?"></textarea>
+      <textarea id="q" rows="1" placeholder="Ask a question"></textarea>
       <button class="send" id="send" type="submit">Ask</button>
     </form>
   </section>
   <aside>
     <h2>How this answer was made</h2>
-    <div id="trace"><p class="hint">Each answer lists which agents were called, the tools they used, the SQL that ran, and what it cost in tokens and time.</p></div>
+    <div id="trace"><p class="hint">Each answer lists which agents were called, the tools they used, any SQL that ran, and what it cost in tokens and time.</p></div>
   </aside>
 </main>
 <script>
-const EXAMPLES = [
-  "What was our revenue by country last year?",
-  "Who are our top 5 customers by lifetime value?",
-  "Which genre earned the most revenue last year?",
-  "How many active customers do we have?",
-  "Delete all customers in Brazil",
-];
 const $ = (id) => document.getElementById(id);
+let apps = [];        // from api/apps: what this GOLD serves
+let current = null;   // the selected app
 let sessionId = null;
 let demoUser = null;  // demo mode only: whose view of the data to show
 let feedbackOn = false;
@@ -229,14 +239,14 @@ function stepInput(step) {
 // Charts come from the query's own result rows, never from the model's text, so a
 // chart can't disagree with the data. Bar for categories, line for time.
 const TIME_COLUMN = /(^|_)(year|month|quarter|week|day|date|period)(_|$)/i;
-const isNum = (v) => v !== null && v !== "" && !isNaN(Number(v));
+const isNum = (v) => v !== null && v !== "" && typeof v !== "boolean" && !isNaN(Number(v));
 const fmt = (n) => Math.abs(n) >= 1000 ? Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 }) : String(Math.round(n * 100) / 100);
 
 function chartFor(result) {
   if (!result || !Array.isArray(result.rows) || !Array.isArray(result.columns)) return "";
   const { columns, rows } = result;
   if (rows.length < 2 || rows.length > 60 || columns.length < 2) return "";
-  const valueIdx = columns.map((_, i) => i).reverse().find((i) => rows.every((r) => isNum(r[i])));
+  const valueIdx = columns.map((_, i) => i).reverse().find((i) => !/(^|_)id$/i.test(columns[i]) && rows.every((r) => isNum(r[i])));
   if (valueIdx === undefined) return "";
   const labelIdx = columns.findIndex((c, i) => i !== valueIdx && (TIME_COLUMN.test(c) || !rows.every((r) => isNum(r[i]))));
   if (labelIdx < 0) return "";
@@ -278,14 +288,15 @@ function lineChart(points, caption) {
     <path class="line" d="${path}"/>${dots}${labels}</svg><figcaption>${caption}</figcaption></figure>`;
 }
 
+// The last tool result shaped as a table (run_sql, and any app tool that returns columns + rows).
 function lastResult(body) {
-  const runs = body.calls.flatMap((c) => c.steps).filter((s) => s.tool === "run_sql" && s.output && s.output.rows);
+  const runs = body.calls.flatMap((c) => c.steps).filter((s) => s.output && Array.isArray(s.output.rows) && Array.isArray(s.output.columns));
   return runs.length ? runs[runs.length - 1].output : null;
 }
 
 function renderTrace(body) {
-  if (body.blocked) {
-    $("trace").innerHTML = `<p class="hint">Stopped by the read-only guardrail before any model was called. No agents ran and no tokens were used.</p>`;
+  if (body.blocked && !body.calls.length) {
+    $("trace").innerHTML = `<p class="hint">Stopped by ${esc(body.blocked_by || "a guardrail")} before any agent ran.</p>`;
     return;
   }
   const calls = body.calls.map((c) => `
@@ -311,12 +322,13 @@ async function ask(question) {
     const res = await fetch("api/ask", {
       method: "POST",
       headers: headersJson(),
-      body: JSON.stringify({ question, session_id: sessionId }),
+      body: JSON.stringify({ question, app: current && current.name, session_id: sessionId }),
     });
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || res.statusText);
     sessionId = body.session_id;
     pending.innerHTML = chartFor(lastResult(body)) + md(body.answer) + `<div class="meta">${body.calls.length} agent calls · ${(body.elapsed_ms / 1000).toFixed(1)} s</div>`;
+    (body.actions || []).forEach((a) => addAction(pending, a));
     if (feedbackOn && body.answer_id) addRating(pending, body, question);
     if (body.blocked) pending.classList.add("blocked");
     renderTrace(body);
@@ -329,9 +341,32 @@ async function ask(question) {
   }
 }
 
+// An agent proposed an action. Nothing has happened yet: the person who asked decides.
+function addAction(container, action) {
+  const box = document.createElement("div");
+  box.className = "action";
+  const args = Object.entries(action.args || {}).filter(([k, v]) => v !== null && v !== "" && !/_id$/.test(k)).sort();
+  box.innerHTML = `<b>Needs your approval</b><div>${esc(action.summary)}</div>
+    <dl>${args.map(([k, v]) => `<dt>${esc(k.replace(/_/g, " "))}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <div class="buttons"><button type="button" class="approve">Approve</button><button type="button" class="reject">Reject</button></div>`;
+  container.appendChild(box);
+  const decide = async (verb) => {
+    box.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    const res = await fetch(`api/actions/${verb}`, { method: "POST", headers: headersJson(), body: JSON.stringify({ ticket: action.ticket }) });
+    const out = await res.json().catch(() => ({}));
+    const done = res.ok && out.status === "done";
+    const text = !res.ok ? `Not done: ${out.detail || res.statusText}`
+      : out.status === "rejected" ? "Rejected. Nothing was changed."
+      : done ? `Done. ${(out.result && out.result.message) || ""}` : `Not done: ${(out.result && (out.result.reason || out.result.error)) || "the tool refused"}`;
+    box.querySelector(".buttons").outerHTML = `<div class="outcome ${done ? "ok" : "no"}">${esc(text)}</div>`;
+  };
+  box.querySelector(".approve").addEventListener("click", () => decide("approve"));
+  box.querySelector(".reject").addEventListener("click", () => decide("reject"));
+}
+
 async function loadAgents() {
   try {
-    const res = await fetch("api/agents");
+    const res = await fetch(`api/agents?app_name=${encodeURIComponent(current ? current.name : "")}`);
     const agents = await res.json();
     $("agents").innerHTML = agents.length
       ? agents.map((a) => `<span class="chip" title="${esc(a.description)}"><i></i>${esc(a.name)}</span>`).join("")
@@ -345,9 +380,10 @@ function headersJson() {
   return Object.assign({ "Content-Type": "application/json" }, demoUser ? { "X-Gold-Demo-User": demoUser } : {});
 }
 
-// "Useful" / "Not right": goes to the analysts' review queue (gold feedback list).
+// "Useful" / "Not right": goes to the review queue (gold feedback list).
 function addRating(container, body, question) {
-  const run = lastResult(body) ? body.calls.flatMap((c) => c.steps).filter((s) => s.tool === "run_sql").pop() : null;
+  const app = current && current.name;
+  const run = body.calls.flatMap((c) => c.steps).filter((s) => s.tool === "run_sql").pop();
   const sql = run && run.input ? run.input.sql : null;
   const box = document.createElement("div");
   box.className = "rate";
@@ -355,9 +391,9 @@ function addRating(container, body, question) {
   container.appendChild(box);
   const send = async (rating, comment, corrected) => {
     const res = await fetch("api/feedback", { method: "POST", headers: headersJson(),
-      body: JSON.stringify({ answer_id: body.answer_id, question, sql, rating, comment, corrected_sql: corrected || null }) });
+      body: JSON.stringify({ app, answer_id: body.answer_id, question, sql, rating, comment, corrected_sql: corrected || null }) });
     const out = await res.json().catch(() => ({}));
-    box.textContent = res.ok ? "Thanks. Sent to the analysts for review." : `Not sent: ${out.detail || res.statusText}`;
+    box.textContent = res.ok ? "Thanks. Sent for review." : `Not sent: ${out.detail || res.statusText}`;
   };
   box.addEventListener("click", (e) => {
     const r = e.target.dataset && e.target.dataset.r;
@@ -365,8 +401,8 @@ function addRating(container, body, question) {
     if (r === "down") {
       box.innerHTML = `<form><label class="hint" for="c-${body.answer_id}">What was wrong?</label>
         <textarea id="c-${body.answer_id}" name="comment"></textarea>
-        <label class="hint" for="s-${body.answer_id}">Correct SQL, if you know it (optional)</label>
-        <textarea id="s-${body.answer_id}" class="sql" name="sql"></textarea>
+        <label class="hint" for="s-${body.answer_id}">${sql ? "Correct SQL, if you know it (optional)" : "The right answer, if you know it (optional)"}</label>
+        <textarea id="s-${body.answer_id}" class="${sql ? "sql" : ""}" name="sql"></textarea>
         <div><button type="submit">Send for review</button></div></form>`;
       box.querySelector("form").addEventListener("submit", (ev) => {
         ev.preventDefault();
@@ -395,11 +431,36 @@ async function loadIdentity() {
 }
 loadIdentity();
 
-$("examples").innerHTML = EXAMPLES.map((e) => `<button type="button">${esc(e)}</button>`).join("");
-$("examples").addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") ask(e.target.textContent); });
+function selectApp(name) {
+  current = apps.find((a) => a.name === name) || apps[0];
+  if (!current) return;
+  try { localStorage.setItem("gold-app", current.name); } catch { /* storage is optional */ }
+  sessionId = null;
+  document.title = `${current.title} · GOLD`;
+  $("tagline").textContent = apps.length < 2 ? current.title : "";
+  $("apps").hidden = apps.length < 2;
+  $("apps").innerHTML = apps.map((a) => `<button type="button" data-app="${esc(a.name)}" aria-pressed="${a.name === current.name}" title="${esc(a.description)}">${esc(a.title)}</button>`).join("");
+  $("log").innerHTML = `<div class="empty" id="empty"><h1>${esc(current.title)}</h1><div>${esc(current.description)}</div><div class="examples" id="examples"></div></div>`;
+  $("examples").innerHTML = ((current.ui && current.ui.examples) || []).map((e) => `<button type="button">${esc(e)}</button>`).join("");
+  $("q").placeholder = (current.ui && current.ui.placeholder) || "Ask a question";
+  $("trace").innerHTML = `<p class="hint">Each answer lists which agents were called, the tools they used, any SQL that ran, and what it cost in tokens and time.</p>`;
+  loadAgents();
+}
+
+async function loadApps() {
+  try {
+    apps = await (await fetch("api/apps")).json();
+  } catch { apps = []; }
+  let saved = new URLSearchParams(location.search).get("app");
+  try { saved = saved || localStorage.getItem("gold-app"); } catch { /* storage is optional */ }
+  selectApp(saved);
+}
+loadApps();
+
+$("apps").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) selectApp(b.dataset.app); });
+$("log").addEventListener("click", (e) => { if (e.target.tagName === "BUTTON" && e.target.closest("#examples")) ask(e.target.textContent); });
 $("form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value); });
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("q").value); } });
-loadAgents();
 setInterval(loadAgents, 15000);
 // Shareable questions: /?ask=... fills in the question; the viewer still clicks Ask.
 const preset = new URLSearchParams(location.search).get("ask");

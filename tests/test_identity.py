@@ -4,10 +4,10 @@ import time
 import httpx
 import psycopg
 import pytest
-
 import stack
-from gold import config, identity
 from test_end_to_end import DB_URL, _db_available
+
+from gold import config, identity
 
 ASK = f"http://127.0.0.1:{stack.PORTS['orchestrator']}/api/ask"
 

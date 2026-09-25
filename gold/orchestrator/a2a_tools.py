@@ -6,7 +6,12 @@ import time
 
 import httpx
 from a2a.client import ClientConfig, create_client
-from a2a.helpers import get_data_parts, get_message_text, get_text_parts, new_text_message
+from a2a.helpers import (
+    get_data_parts,
+    get_message_text,
+    get_text_parts,
+    new_text_message,
+)
 from a2a.types import Role, SendMessageRequest, TaskState
 from agents import FunctionTool
 from agents.tool_context import ToolContext

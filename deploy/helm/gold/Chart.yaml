@@ -1,7 +1,7 @@
 apiVersion: v2
 name: gold
-description: GOLD (Governed Open Language-to-Data) on any Kubernetes cluster
+description: "GOLD, an enterprise agentic AI reference architecture, on any Kubernetes cluster"
 type: application
-version: 0.3.0
-appVersion: "0.3.0"
-keywords: [agents, a2a, mcp, text-to-sql, openai-compatible, vllm, litellm]
+version: 0.4.0
+appVersion: "0.4.0"
+keywords: [agents, multi-agent, a2a, mcp, text-to-sql, human-in-the-loop, openai-compatible, vllm, litellm]

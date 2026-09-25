@@ -1,7 +1,7 @@
 #!/bin/sh
 # The feedback loop's review queue, and the two logins that touch it:
 #   gold_feedback  used by the orchestrator: can add feedback, and nothing else
-#   gold_curator   used by analysts (gold feedback ...): can review feedback and add verified queries
+#   gold_curator   used by reviewers (gold feedback ...): can review feedback and add verified queries
 # GOLD's query login (gold_reader) stays read-only and cannot see this table.
 set -eu
 
@@ -14,6 +14,7 @@ CREATE TABLE feedback
 (
     id            SERIAL PRIMARY KEY,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    app           TEXT,
     answer_id     TEXT NOT NULL,
     user_id       TEXT,
     question      TEXT NOT NULL,

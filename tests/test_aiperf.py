@@ -3,9 +3,9 @@ import shutil
 from pathlib import Path
 
 import pytest
-
-from gold import aiperf
 from test_end_to_end import _db_available
+
+from apps.data_analyst import aiperf, settings
 
 FIXTURE = Path(__file__).parent / "fixtures" / "aiperf_concurrency_4.json"
 
@@ -24,10 +24,10 @@ def test_summary_reads_a_real_aiperf_export(tmp_path):
 
 @pytest.mark.skipif(not _db_available(), reason="needs Postgres with deploy/postgres/*.sql loaded")
 def test_payloads_are_the_production_sql_requests(tmp_path):
-    from gold import sql_model
+    from apps.data_analyst import sql_model
 
     out = tmp_path / "payloads.jsonl"
-    n = aiperf.write_payloads("evals/questions.jsonl", str(out), model="gold-sql")
+    n = aiperf.write_payloads(settings.EVAL_QUESTIONS, str(out), model="gold-sql")
     lines = [json.loads(line) for line in out.read_text().splitlines()]
     assert n == len(lines) == 20
     first = lines[0]

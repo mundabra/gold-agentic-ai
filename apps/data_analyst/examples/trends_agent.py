@@ -1,0 +1,49 @@
+"""Example: add a new specialist to GOLD without touching the orchestrator.
+
+The Trends agent explains how a metric changed over time. It reuses the
+read-only data tools over MCP, publishes an A2A Agent Card, and registers
+itself. Its skill carries the tag "app:data-analyst", so the Talk to your Data
+app picks it up from the registry on the next question and can call it as
+`ask_trends_agent`: no manifest or orchestrator change.
+
+    GOLD_PUBLIC_URL=http://trends-agent:8000 python -m apps.data_analyst.examples.trends_agent
+"""
+
+from a2a.types import AgentSkill
+from agents import Agent
+
+from apps.data_analyst import settings
+from gold import a2a_host, config, llm
+
+INSTRUCTIONS = """You are the Trends agent. You explain how a business metric changed over time.
+Use describe_schema to find the right tables, then run_sql to get the metric per period.
+Reply with the per-period table, the change between the last two periods in absolute and
+percentage terms, and one sentence on what drove it. Only use numbers returned by run_sql."""
+
+
+def build_agent(servers):
+    return Agent(
+        name="Trends agent",
+        instructions=INSTRUCTIONS,
+        model=llm.model(config.AGENT_MODEL),
+        model_settings=llm.settings(),
+        mcp_servers=servers,
+    )
+
+
+CARD = a2a_host.agent_card(
+    name="Trends agent",
+    description="Explains how a business metric changed between periods (month over month, year over year).",
+    skills=[
+        AgentSkill(
+            id="explain_trend",
+            name="Explain a trend",
+            description="Computes a metric per period and explains the change between the latest periods.",
+            tags=["trends", "analytics", "app:data-analyst"],
+            examples=["How did revenue change year over year?"],
+        )
+    ],
+)
+
+if __name__ == "__main__":
+    a2a_host.serve(CARD, a2a_host.AgentsSdkExecutor(build_agent, {"data-tools": settings.DATA_MCP_URL}))

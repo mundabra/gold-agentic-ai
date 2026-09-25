@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/mundabra/gold-ai-agent   # published on each release; or build the Dockerfile yourself
-  tag: "0.3.0"
+  tag: "0.4.0"
   pullPolicy: IfNotPresent
 
 # --- Models. Every model call goes to one OpenAI-compatible endpoint.
@@ -60,7 +60,7 @@ tracing:
 # endpoint as GOLD (llm.baseUrl or the gateway). Config: files/guardrails/.
 guardrails:
   enabled: false
-  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.3.0
+  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.4.0
   model: gold-general              # the model the policy self-checks use
   checkAnswers: true
   failOpen: false                  # block questions if the rails server is unreachable
@@ -82,6 +82,7 @@ database:
   existingSecret: ""             # or a Secret with keys: url (and optionally glossaryUrl)
   schemas: "public"              # schemas the SQL agent may see and query
   feedbackUrl: ""                # insert-only login for the feedback queue (default: the bundled Postgres)
+  crmUrl: ""                     # Sales copilot: the login that can only add CRM activities (default: the bundled Postgres)
 
 # Feedback loop: "Useful" / "Not right" in the UI, reviewed with `gold feedback`.
 feedback:
@@ -94,16 +95,26 @@ postgres:
   readerPassword: gold_reader
   feedbackPassword: gold_feedback
   curatorPassword: gold_curator
+  crmPassword: gold_crm_writer
   storage: 2Gi
 
-# --- GOLD components (same image, different command).
+# --- Apps: what GOLD serves (apps/*/app.yaml). Empty = every app in the image.
+apps:
+  enabled: []                    # e.g. [data-analyst]; also remove the other apps' components below
+  default: ""                    # the app the UI opens on (default: the first)
+
+# --- GOLD components (same image, different command). Platform: orchestrator, registry.
 components:
   orchestrator: { replicas: 1 }
   registry: { replicas: 1 }       # in-memory: keep at 1
+  # Talk to your Data (apps/data_analyst)
   sql-agent: { replicas: 1 }
   definitions-agent: { replicas: 1 }
   mcp-data: { replicas: 1 }
   mcp-glossary: { replicas: 1 }
+  # Sales copilot (apps/sales_copilot)
+  account-agent: { replicas: 1 }
+  mcp-crm: { replicas: 1 }
 
 resources:
   requests: { cpu: 100m, memory: 192Mi }

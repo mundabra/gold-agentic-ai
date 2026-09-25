@@ -6,8 +6,7 @@ WORKDIR /app
 
 COPY pyproject.toml README.md LICENSE ./
 COPY gold ./gold
-COPY evals ./evals
-COPY examples ./examples
+COPY apps ./apps
 RUN pip install ".[otel,sessions,auth]" && useradd --system --uid 10001 gold
 
 USER 10001

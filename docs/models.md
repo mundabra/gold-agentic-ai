@@ -11,7 +11,7 @@ Any model behind an OpenAI-compatible API works. Pick with `gold eval` (accuracy
 
 ## Reasoning: on for planning, usually off for SQL
 
-Reasoning models think before they answer. For the SQL role, with the agreed definitions already in the prompt, that thinking mostly adds time. In GOLD's measurements, turning it off kept accuracy at 100%, halved the median latency, and removed the long tail ([evals/PERFORMANCE.md](../evals/PERFORMANCE.md#turning-reasoning-off)).
+Reasoning models think before they answer. For the SQL role, with the agreed definitions already in the prompt, that thinking mostly adds time. In GOLD's measurements, turning it off kept accuracy at 100%, halved the median latency, and removed the long tail ([apps/data_analyst/evals/PERFORMANCE.md](../apps/data_analyst/evals/PERFORMANCE.md#turning-reasoning-off)).
 
 Each model family turns reasoning off differently. GOLD passes the switch through as extra request fields:
 

@@ -11,11 +11,13 @@ docker run -d --name gold-test-pg -p 55432:5432 -e POSTGRES_DB=gold -e POSTGRES_
 pytest
 ```
 
-`pytest` runs the unit tests and the whole system end to end (orchestrator, registry, both A2A agents, both MCP servers, Postgres) with the scripted model, so no API key is needed.
+`pytest` runs the unit tests and both sample apps end to end (orchestrator, registry, every A2A agent and MCP server, Postgres) with the scripted model, so no API key is needed.
 
 ## Ground rules
 
+- New use cases are new apps under `apps/` ([build an app](docs/build-an-app.md)); the platform in `gold/` should not need to change for them.
+
 - Keep GOLD vendor-neutral: anything that works with one provider must work through the OpenAI-compatible API.
-- A change to the SQL prompt (`gold/sql_model.py`) changes what a fine-tuned model sees. Say so in the pull request.
+- A change to the SQL prompt (`apps/data_analyst/sql_model.py`) changes what a fine-tuned model sees. Say so in the pull request.
 - If you change `deploy/postgres/`, copy it to `deploy/helm/gold/files/postgres/` too (CI checks they match).
 - Run `gold eval` against a real model for changes that affect answers, and include the before and after numbers.

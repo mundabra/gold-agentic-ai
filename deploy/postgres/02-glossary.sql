@@ -93,7 +93,7 @@ INSERT INTO glossary (term, synonyms, definition, sql_hint, owner) VALUES
 -- Verified queries: questions an analyst has answered with SQL they vouch for.
 -- The Definitions agent retrieves the closest ones for each question and passes them
 -- to the SQL agent as worked examples. `gold verify-queries` checks every one in CI.
--- Keep them out of evals/questions.jsonl, or the evaluation stops being a fair test.
+-- Keep them out of apps/data_analyst/evals/questions.jsonl, or the evaluation stops being a fair test.
 
 CREATE TABLE verified_queries
 (
