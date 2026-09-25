@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-# GOLD
+# GOLD Agentic AI - Reference Architecture 
 
 [![ci](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/mundabra/gold-ai-agent/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
