@@ -247,10 +247,10 @@ The chart can also run the LiteLLM gateway (`gateway.enabled`), vLLM on GPU node
 - ✅ **v0.5.0, knowledge (RAG):** pgvector, one `search_knowledge` tool for every app, access by group, citations, retrieval eval
 - ✅ **v0.4.0, the platform:** apps as folders, one orchestrator and UI for every app, human approvals, the Sales copilot
 - ✅ **v0.3.0, enterprise controls:** OpenTelemetry and audit, identity with row-level security, verified queries, feedback loop, NeMo Guardrails, Nemotron profile
-- 🔜 **Better retrieval:** keyword and vector search combined, re-ranking, PDF and Word ingestion
-- 🔜 **A semantic model:** metrics, dimensions and joins defined once, alongside the glossary
-- 🔜 **Cost per user and per app** through the gateway
-- 🔜 **More databases** beyond PostgreSQL, and **chat front-ends** (Slack, Microsoft Teams)
+- 🔜 **v0.6, trust boundaries:** separate signing keys, approvals routed by the platform, a hardened registry, explicit app membership, a fail-closed production profile, an adversarial test suite, supply-chain gates, a threat model
+- 🔜 **v0.7, production posture:** workload identity, control-plane state in Postgres for replicas, a production Helm profile, request budgets, policy-driven approvals, audit integrity, metrics and SLOs
+
+What comes first, what waits and what we won't do: **[ROADMAP.md](ROADMAP.md)**.
 
 ## 🗂️ Project layout
 
