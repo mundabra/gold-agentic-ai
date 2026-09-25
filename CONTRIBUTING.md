@@ -13,6 +13,16 @@ pytest
 
 `pytest` runs the unit tests and both sample apps end to end (orchestrator, registry, every A2A agent and MCP server, Postgres) with the scripted model, so no API key is needed.
 
+## What CI checks
+
+Every pull request needs green `test`, `helm` and `image` checks before it can merge:
+
+- `test`: pytest on Python 3.11 and 3.12 (Postgres pinned by digest), `ruff check gold apps tests --select F,E9,I`, and `pip-audit` on the installed dependencies.
+- `helm`: the chart lints and renders, and its copies of the SQL and rails match the originals.
+- `image`: both images build, and a Trivy scan finds no critical vulnerability that has a fix.
+
+GitHub's secret scanning and push protection are on for the repository. Each release attaches a CycloneDX SBOM of both images.
+
 ## Ground rules
 
 - New use cases are new apps under `apps/` ([build an app](docs/build-an-app.md)); the platform in `gold/` should not need to change for them.

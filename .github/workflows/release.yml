@@ -2,13 +2,15 @@ name: release
 
 # Publishes the GOLD image to GitHub Container Registry when a version tag is pushed:
 #   git tag v0.1.0 && git push origin v0.1.0
+# It also attaches a CycloneDX SBOM of each image to the tag's GitHub release (creating the
+# release with generated notes if it doesn't exist yet; edit the notes with `gh release edit`).
 
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write   # upload the SBOMs to the release
   packages: write
 
 jobs:
@@ -52,3 +54,23 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=NVIDIA NeMo Guardrails server with GOLD's rails
             org.opencontainers.image.licenses=Apache-2.0
+      - name: SBOM of each published image
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26   # v0.24.2
+        with:
+          image: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
+          format: cyclonedx-json
+          output-file: gold-${{ steps.meta.outputs.version }}.cdx.json
+          upload-artifact: false
+      - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26   # v0.24.2
+        with:
+          image: ${{ steps.meta.outputs.image }}-guardrails:${{ steps.meta.outputs.version }}
+          format: cyclonedx-json
+          output-file: gold-guardrails-${{ steps.meta.outputs.version }}.cdx.json
+          upload-artifact: false
+      - name: Attach the SBOMs to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+          gh release upload "$GITHUB_REF_NAME" --clobber *.cdx.json
