@@ -19,6 +19,7 @@ uv venv && uv pip install -e ".[dev,sessions]"
 docker run -d --name gold-test-pg -p 55432:5432 -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin \
   -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" pgvector/pgvector:pg17
 pytest -q                                   # expect all passed, 0 skipped, with the database up
+uvx ruff check gold apps tests --select F,E9,I
 helm lint deploy/helm/gold
 helm template gold deploy/helm/gold --set gateway.enabled=true --set vllm.enabled=true \
   --set scriptedModel.enabled=false --set ingress.enabled=true --set networkPolicy.enabled=true > /dev/null
