@@ -3,7 +3,7 @@ the orchestrator, the A2A agents, the MCP tool servers, the database and the mod
 
 Off unless OTEL_EXPORTER_OTLP_ENDPOINT (or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) is set,
 so any OTLP backend works: Jaeger, Grafana Tempo, an OpenTelemetry Collector, or a
-commercial APM. Needs the extra: pip install "gold-ai-agent[otel]".
+commercial APM. Needs the extra: pip install "gold-agentic-ai[otel]".
 
 Prompts, SQL and results are kept out of spans unless GOLD_TRACE_CONTENT=true, because
 tracing backends are often readable by more people than the data itself.
@@ -41,7 +41,7 @@ def setup(component: str) -> bool:
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
     except ImportError:
-        log.warning('OTEL_EXPORTER_OTLP_ENDPOINT is set but tracing is not installed: pip install "gold-ai-agent[otel]"')
+        log.warning('OTEL_EXPORTER_OTLP_ENDPOINT is set but tracing is not installed: pip install "gold-agentic-ai[otel]"')
         return False
 
     if not config.TRACE_CONTENT:

@@ -2,7 +2,7 @@
 # model, so you can see the whole flow before connecting a real one.
 
 image:
-  repository: ghcr.io/mundabra/gold-ai-agent   # published on each release; or build the Dockerfile yourself
+  repository: ghcr.io/mundabra/gold-agentic-ai   # published on each release; or build the Dockerfile yourself
   tag: "0.5.0"
   pullPolicy: IfNotPresent
 
@@ -61,7 +61,7 @@ tracing:
 # endpoint as GOLD (llm.baseUrl or the gateway). Config: files/guardrails/.
 guardrails:
   enabled: false
-  image: ghcr.io/mundabra/gold-ai-agent-guardrails:0.5.0
+  image: ghcr.io/mundabra/gold-agentic-ai-guardrails:0.5.0
   model: gold-general              # the model the policy self-checks use
   checkAnswers: true
   failOpen: false                  # block questions if the rails server is unreachable

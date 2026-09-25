@@ -32,7 +32,7 @@ GOLD is a reference architecture: the controls below are built in and tested, an
 - [ ] **Least-privilege write logins:** one per write tool, able to do only that action (see `gold_crm_writer` in `deploy/postgres/06-sales.sh`), and review which actions need approval by someone other than the requester.
 - [ ] **Audit storage:** ship the `gold.audit` JSON lines from stdout (or `GOLD_AUDIT_LOG`) to your log or audit store, with retention and access rules.
 - [ ] **Secrets manager** for model keys and database credentials.
-- [ ] **Shared conversation memory** (`pip install "gold-ai-agent[sessions]"` and `GOLD_SESSION_DB_URL`) before running more than one orchestrator replica.
+- [ ] **Shared conversation memory** (`pip install "gold-agentic-ai[sessions]"` and `GOLD_SESSION_DB_URL`) before running more than one orchestrator replica.
 - [ ] **Model gateway policies:** budgets, rate limits and fallbacks in LiteLLM.
 - [ ] **Tracing backend:** point `OTEL_EXPORTER_OTLP_ENDPOINT` at your OpenTelemetry Collector or APM, and restrict who can read traces.
 - [ ] **Pinned images:** pin the LiteLLM and vLLM image tags you have tested.

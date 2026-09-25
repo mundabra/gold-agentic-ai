@@ -1,5 +1,5 @@
 [project]
-name = "gold-ai-agent"
+name = "gold-agentic-ai"
 version = "0.5.0"
 description = "GOLD: an enterprise agentic AI reference architecture. Governed, observable, layered, deployable; with Talk to your Data and a Sales copilot as sample apps."
 readme = "README.md"

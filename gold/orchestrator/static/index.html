@@ -79,6 +79,7 @@
   th { font-weight: 600; }
 
   .empty { margin: auto; max-width: 620px; text-align: center; color: var(--muted); padding: 40px 0; }
+  .empty .hero-mark { display: block; margin: 0 auto 18px; filter: drop-shadow(0 6px 18px rgba(154, 107, 18, 0.25)); }
   .empty h1 { color: var(--ink); font-size: 24px; margin: 0 0 8px; font-weight: 650; }
   .examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
   .examples button { font: inherit; font-size: 13.5px; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
@@ -169,6 +170,7 @@
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+const HERO_MARK = `<svg class="hero-mark" viewBox="0 0 64 64" width="72" height="72" aria-hidden="true"> <defs> <linearGradient id="hero-bg" x1="0" y1="0" x2="1" y2="1"> <stop offset="0" stop-color="#F2CB6B"/> <stop offset="0.55" stop-color="#C8921E"/> <stop offset="1" stop-color="#8A5A0E"/> </linearGradient> </defs> <rect width="64" height="64" rx="16" fill="url(#hero-bg)"/> <path d="M43.9 21.2 A15.5 15.5 0 1 0 47.5 32 H40.5" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/> <circle cx="31.5" cy="32" r="3.6" fill="#FFFFFF"/> </svg>`;
 let apps = [];        // from api/apps: what this GOLD serves
 let current = null;   // the selected app
 let sessionId = null;
@@ -181,7 +183,8 @@ function esc(s) {
 function inline(s) {
   return esc(s)
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s.,;:!?)]|$)/g, "$1<em>$2</em>");
 }
 // Small markdown renderer: code blocks, tables, headings, bullets, paragraphs.
 function md(text) {
@@ -354,9 +357,16 @@ function sourcesFor(body) {
       // Models don't always keep the brackets, so match the "Title › Section" inside them.
       if (body.answer.includes(r.cite.replace(/^\[|\]$/g, ""))) seen.set(r.cite, r);
     }));
+  // If the answer didn't quote a citation, list the documents the agent read instead.
+  let label = "Sources";
+  if (!seen.size) {
+    label = "Sources the agent read";
+    body.calls.flatMap((c) => c.steps).filter((s) => s.tool === "search_knowledge" && s.output && Array.isArray(s.output.results))
+      .forEach((s) => s.output.results.forEach((r) => { if (![...seen.values()].some((x) => x.source === r.source)) seen.set(r.cite, r); }));
+  }
   if (!seen.size) return "";
-  return `<div class="sources">Sources<ol>${[...seen.values()].map((r) =>
-    `<li>${esc(r.cite.replace(/^\[|\]$/g, ""))} <span>(${esc(r.source)})</span></li>`).join("")}</ol></div>`;
+  return `<div class="sources">${label}<ol>${[...seen.values()].map((r) =>
+    `<li>${esc(r.cite.replace(/^\[|\]$/g, ""))} <span>(${esc(r.source)})</span></li>`).slice(0, 4).join("")}</ol></div>`;
 }
 
 // An agent proposed an action. Nothing has happened yet: the person who asked decides.
@@ -458,7 +468,7 @@ function selectApp(name) {
   $("tagline").textContent = apps.length < 2 ? current.title : "";
   $("apps").hidden = apps.length < 2;
   $("apps").innerHTML = apps.map((a) => `<button type="button" data-app="${esc(a.name)}" aria-pressed="${a.name === current.name}" title="${esc(a.description)}">${esc(a.title)}</button>`).join("");
-  $("log").innerHTML = `<div class="empty" id="empty"><h1>${esc(current.title)}</h1><div>${esc(current.description)}</div><div class="examples" id="examples"></div></div>`;
+  $("log").innerHTML = `<div class="empty" id="empty">${HERO_MARK}<h1>${esc(current.title)}</h1><div>${esc(current.description)}</div><div class="examples" id="examples"></div></div>`;
   $("examples").innerHTML = ((current.ui && current.ui.examples) || []).map((e) => `<button type="button">${esc(e)}</button>`).join("");
   $("q").placeholder = (current.ui && current.ui.placeholder) || "Ask a question";
   $("trace").innerHTML = `<p class="hint">Each answer lists which agents were called, the tools they used, any SQL that ran, and what it cost in tokens and time.</p>`;
