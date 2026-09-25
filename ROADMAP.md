@@ -10,6 +10,19 @@ GOLD's next work is **proving and tightening its trust boundaries**, not adding 
 4. **Deterministic enforcement is the product.** Database permissions, RLS, signed approvals and retrieval filters are the guarantees. Guardrails and model quality are measured, never promised.
 5. **Every security claim has a test.**
 
+## Keep it simple: the rule for every change
+
+Hardening must not turn GOLD into infrastructure soup. Each change has to pass this check before it merges:
+
+- **No new mandatory component.** The demo still runs as today's containers, with no new required service, database, queue or sidecar. A new capability is optional, or it's switched on by the production profile.
+- **Use the extension points that exist.** Add capabilities through the app manifest, the store interfaces, MCP tools and settings, not through a new framework or plugin system.
+- **Standard parts over custom code:** PyJWT for tokens, Postgres for state, OpenTelemetry for telemetry, Kubernetes primitives for deployment.
+- **Configuration over code, defaults that work.** A new setting needs a safe default and a line in the settings table; if it needs explaining in more than two sentences, the design is too complex.
+- **Replace, don't pile up.** When a mechanism is superseded, delete the old one (after a one-release deprecation if users depend on it).
+- **Smallest slice first.** Ship the simplest design that meets an issue's acceptance criteria; anything beyond that is a follow-up issue.
+
+If an item can't meet this bar, it is re-scoped or goes to "Later", and the maintainer decides.
+
 ## Now: v0.6 "Trust boundaries" (P0)
 
 In build order. Later items depend on earlier ones.
