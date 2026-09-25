@@ -16,6 +16,8 @@
       sql-agent: apps.data_analyst.agents.sql_agent
     cli: apps.data_analyst.cli            # optional: adds `gold <command>`s (register(sub), run(args))
     scripted: apps.data_analyst.scripted  # optional: canned replies for the scripted stand-in model
+    knowledge:                            # optional: document collections, loaded into the knowledge store
+      sales-playbook: {path: knowledge, description: How we sell}
     hooks:                                # optional: app code the platform calls at set points
       check_correction: apps.data_analyst.curation:check_correction   # validate a user's correction
     ui:
@@ -52,6 +54,7 @@ class App:
     cli: str | None = None
     scripted: str | None = None
     hooks: dict = field(default_factory=dict)
+    knowledge: dict = field(default_factory=dict)
     ui: dict = field(default_factory=dict)
     path: Path | None = None
 
@@ -92,6 +95,7 @@ def load(folder: Path) -> App:
         cli=manifest.get("cli"),
         scripted=manifest.get("scripted"),
         hooks=dict(manifest.get("hooks") or {}),
+        knowledge=dict(manifest.get("knowledge") or {}),
         ui=dict(manifest.get("ui") or {}),
         path=folder,
     )
@@ -139,3 +143,18 @@ def components() -> dict[str, str]:
                 raise ValueError(f"Component '{component}' is defined twice, by different modules.")
             merged[component] = module
     return merged
+
+
+def knowledge_collections() -> list:
+    """Every document collection the apps declare (app.yaml `knowledge:`), with folders resolved."""
+    from gold.knowledge import Collection
+
+    found = {}
+    for app in all_apps().values():
+        for name, spec in app.knowledge.items():
+            spec = spec or {}
+            audience = spec.get("audience") or ()
+            found[name] = Collection(name=name, path=str(app.path / spec.get("path", name)),
+                                     description=spec.get("description", ""),
+                                     acl=tuple([audience] if isinstance(audience, str) else audience))
+    return list(found.values())

@@ -14,6 +14,7 @@ GOLD is a reference architecture: the controls below are built in and tested, an
 | Secrets | Each Kubernetes Deployment receives only the secrets it uses. `llm.existingSecret` and `database.existingSecret` keep keys out of Helm values. |
 | Network | Optional NetworkPolicies (`networkPolicy.enabled`) allow only the connections GOLD needs. Compose publishes ports on 127.0.0.1 only. |
 | Safety rails | Optional NVIDIA NeMo Guardrails on every question and answer, failing closed ([guardrails](guardrails.md)). |
+| Knowledge | Documents in pgvector under their own login; every search filtered by the user's groups inside the database; citations on every passage ([knowledge](knowledge.md)). |
 | Identity | Proxy or OIDC sign-in, a signed user context across services, Postgres row-level security, per-user conversations, and the user in every audit record ([identity](identity.md)). |
 | Feedback | "Useful" / "Not right" with corrections go to a review queue through an insert-only login; analysts promote fixes to verified queries ([feedback](feedback.md)). |
 | Registry | Optional shared token (`GOLD_REGISTRY_TOKEN`) for registration. A live agent's name can't be taken over by another service. |

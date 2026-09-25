@@ -7,7 +7,7 @@ Issues and pull requests are welcome. If you use an AI coding agent, point it at
 ```bash
 uv venv && uv pip install -e ".[dev,sessions]"
 docker run -d --name gold-test-pg -p 55432:5432 -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin \
-  -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" postgres:17-alpine
+  -e POSTGRES_PASSWORD=gold_admin -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" pgvector/pgvector:pg17
 pytest
 ```
 

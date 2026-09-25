@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 610" width="1100" height="610" role="img" aria-label="GOLD reference architecture in layers. People use the chat UI, API or CLI. The platform layer holds the orchestrator (identity, guardrails, memory, approvals), the agent registry, audit and tracing, and evaluation. Apps sit on the platform: Talk to your Data with a Definitions agent and a SQL agent, the Sales copilot with an Account agent that also reuses the other two, and your own app. Agents reach MCP tool servers, which reach Postgres through restricted logins with row-level security. Every model call goes to one OpenAI-compatible endpoint: a hosted API, or the LiteLLM gateway in front of vLLM or NVIDIA NIM.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 610" width="1100" height="610" role="img" aria-label="GOLD reference architecture in layers. Tools include knowledge search over company documents, stored in pgvector. People use the chat UI, API or CLI. The platform layer holds the orchestrator (identity, guardrails, memory, approvals), the agent registry, audit and tracing, and evaluation. Apps sit on the platform: Talk to your Data with a Definitions agent and a SQL agent, the Sales copilot with an Account agent that also reuses the other two, and your own app. Agents reach MCP tool servers, which reach Postgres through restricted logins with row-level security. Every model call goes to one OpenAI-compatible endpoint: a hosted API, or the LiteLLM gateway in front of vLLM or NVIDIA NIM.">
   <style>
     text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1C1F22; }
     .t { font-size: 15px; font-weight: 600; }
@@ -77,15 +77,18 @@
   <rect x="20" y="406" width="800" height="84" rx="10" class="layer"/>
   <text x="36" y="432" class="l">TOOLS</text>
   <text x="36" y="450" class="s">MCP servers</text>
-  <rect x="200" y="418" width="190" height="60" rx="10" class="box"/>
-  <text x="295" y="442" class="t" text-anchor="middle">Data + glossary</text>
-  <text x="295" y="462" class="s" text-anchor="middle">SQLGlot · dry-run cost</text>
-  <rect x="405" y="418" width="190" height="60" rx="10" class="box"/>
-  <text x="500" y="442" class="t" text-anchor="middle">CRM tools</text>
-  <text x="500" y="462" class="s" text-anchor="middle">typed · approval gate</text>
-  <rect x="610" y="418" width="195" height="60" rx="10" class="yours"/>
-  <text x="707" y="442" class="t" text-anchor="middle">Your tools</text>
-  <text x="707" y="462" class="s" text-anchor="middle">any MCP server</text>
+  <rect x="200" y="418" width="146" height="60" rx="10" class="box"/>
+  <text x="273" y="442" class="t" text-anchor="middle">Data + glossary</text>
+  <text x="273" y="462" class="s" text-anchor="middle">SQLGlot · dry-run cost</text>
+  <rect x="354" y="418" width="146" height="60" rx="10" class="box"/>
+  <text x="427" y="442" class="t" text-anchor="middle">CRM tools</text>
+  <text x="427" y="462" class="s" text-anchor="middle">typed · approval gate</text>
+  <rect x="508" y="418" width="146" height="60" rx="10" class="gold"/>
+  <text x="581" y="442" class="t" text-anchor="middle">Knowledge</text>
+  <text x="581" y="462" class="s" text-anchor="middle">RAG · by audience</text>
+  <rect x="662" y="418" width="143" height="60" rx="10" class="yours"/>
+  <text x="733" y="442" class="t" text-anchor="middle">Your tools</text>
+  <text x="733" y="462" class="s" text-anchor="middle">any MCP server</text>
   <path d="M500,490 V514" class="line" marker-end="url(#a)"/><text x="508" y="507" class="p">SQL</text>
 
   <!-- 5. Data -->
@@ -93,17 +96,17 @@
   <text x="36" y="542" class="l">DATA</text>
   <text x="36" y="560" class="s">your systems</text>
   <rect x="200" y="528" width="605" height="54" rx="10" class="box"/>
-  <text x="502" y="551" class="t" text-anchor="middle">Postgres (or your database)</text>
-  <text x="502" y="570" class="s" text-anchor="middle">read-only login · column grants · row-level security per user · write-only CRM login</text>
+  <text x="502" y="551" class="t" text-anchor="middle">Postgres + pgvector (or your database)</text>
+  <text x="502" y="570" class="s" text-anchor="middle">read-only login · column grants · row-level security · write-only CRM login · documents</text>
 
   <!-- Models -->
   <rect x="850" y="104" width="230" height="490" rx="12" class="layer"/>
   <text x="866" y="130" class="l">MODELS</text>
   <text x="866" y="148" class="s">one OpenAI-compatible</text>
-  <text x="866" y="164" class="s">endpoint, two roles</text>
+  <text x="866" y="164" class="s">endpoint, three roles</text>
   <rect x="866" y="190" width="198" height="70" rx="10" class="gold"/>
   <text x="965" y="218" class="t" text-anchor="middle">LiteLLM gateway</text>
-  <text x="965" y="240" class="s" text-anchor="middle">gold-general · gold-sql</text>
+  <text x="965" y="240" class="s" text-anchor="middle">general · sql · embed</text>
   <path d="M965,260 V292" class="line" marker-end="url(#a)"/>
   <rect x="866" y="296" width="198" height="54" rx="10" class="box"/>
   <text x="965" y="320" class="t" text-anchor="middle">Hosted API</text>

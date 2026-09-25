@@ -55,12 +55,14 @@ x-gold: &gold
     GOLD_DATA_MCP_URL: http://mcp-data:8000/mcp
     GOLD_GLOSSARY_MCP_URL: http://mcp-glossary:8000/mcp
     GOLD_CRM_MCP_URL: http://mcp-crm:8000/mcp
+    GOLD_KNOWLEDGE_MCP_URL: http://mcp-knowledge:8000/mcp
+    GOLD_EMBEDDING_MODEL: ${GOLD_EMBEDDING_MODEL:-gold-embed}
     GOLD_APPS: ${GOLD_APPS:-}               # empty: serve every app
     GOLD_DEFAULT_APP: ${GOLD_DEFAULT_APP:-}
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
     environment:
       POSTGRES_DB: gold
@@ -70,6 +72,7 @@ services:
       GOLD_FEEDBACK_PASSWORD: ${GOLD_FEEDBACK_PASSWORD:-gold_feedback}
       GOLD_CURATOR_PASSWORD: ${GOLD_CURATOR_PASSWORD:-gold_curator}
       GOLD_CRM_PASSWORD: ${GOLD_CRM_PASSWORD:-gold_crm_writer}
+      GOLD_KNOWLEDGE_PASSWORD: ${GOLD_KNOWLEDGE_PASSWORD:-gold_knowledge}
     ports:
       - "127.0.0.1:${GOLD_DB_PORT:-5432}:5432"    # for gold eval / bench / dataset on your machine
     volumes:
@@ -117,6 +120,17 @@ services:
       registry: { condition: service_healthy }
       mcp-glossary: { condition: service_healthy }
 
+  # Knowledge retrieval (platform): the documents apps declare, searched with pgvector
+  mcp-knowledge:
+    <<: *gold
+    command: ["serve", "mcp-knowledge"]
+    environment:
+      <<: *gold-env
+      # Only this service gets the knowledge login (it owns the passages and embeddings).
+      GOLD_KNOWLEDGE_URL: ${GOLD_COMPOSE_KNOWLEDGE_URL:-postgresql://gold_knowledge:${GOLD_KNOWLEDGE_PASSWORD:-gold_knowledge}@postgres:5432/gold}
+    depends_on:
+      postgres: { condition: service_healthy }
+
   # Sales copilot (apps/sales_copilot)
   mcp-crm:
     <<: *gold
@@ -138,6 +152,7 @@ services:
     depends_on:
       registry: { condition: service_healthy }
       mcp-crm: { condition: service_healthy }
+      mcp-knowledge: { condition: service_healthy }
 
   orchestrator:
     <<: *gold

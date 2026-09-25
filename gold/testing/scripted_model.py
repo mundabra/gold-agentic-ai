@@ -10,8 +10,10 @@ in the chat UI get meaningful answers.
     gold serve scripted-model
 """
 
+import hashlib
 import importlib
 import json
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -120,6 +122,31 @@ async def chat(request: Request) -> dict:
     }
 
 
+STOPWORDS = set("a an and are as at be by for from how i in is it me my of on or our the to we what when which who why with you your".split())
+
+
+def hashed_embedding(text: str, dims: int = 256) -> list[float]:
+    """A deterministic bag-of-words vector (feature hashing): similar wording scores close. Not a real model."""
+    vector = [0.0] * dims
+    for word in re.findall(r"[a-z0-9]+", text.lower()):
+        if word in STOPWORDS:
+            continue
+        stem = word[:-1] if len(word) > 3 and word.endswith("s") else word
+        h = int(hashlib.md5(stem.encode()).hexdigest(), 16)
+        vector[h % dims] += 1.0 if (h >> 8) & 1 else -1.0
+    norm = sum(x * x for x in vector) ** 0.5 or 1.0
+    return [x / norm for x in vector]
+
+
+@app.post("/v1/embeddings")
+async def embeddings(request: Request) -> dict:
+    body = await request.json()
+    texts = body["input"] if isinstance(body["input"], list) else [body["input"]]
+    return {"object": "list", "model": body.get("model", "scripted"),
+            "data": [{"object": "embedding", "index": i, "embedding": hashed_embedding(t)} for i, t in enumerate(texts)],
+            "usage": {"prompt_tokens": 0, "total_tokens": 0}}
+
+
 @app.post("/v1/checks")
 async def checks(request: Request) -> dict:
     """Stand-in for a NeMo Guardrails server's /v1/checks, for tests: blocks poems and emails."""
@@ -135,7 +162,7 @@ async def checks(request: Request) -> dict:
 
 @app.get("/v1/models")
 def models() -> dict:
-    return {"object": "list", "data": [{"id": m, "object": "model"} for m in ("gold-general", "gold-sql")]}
+    return {"object": "list", "data": [{"id": m, "object": "model"} for m in ("gold-general", "gold-sql", "gold-embed")]}
 
 
 @app.get("/healthz")

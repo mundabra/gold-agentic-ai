@@ -17,7 +17,7 @@ jobs:
         run: |
           docker run -d --name gold-test-pg -p 55432:5432 \
             -e POSTGRES_DB=gold -e POSTGRES_USER=gold_admin -e POSTGRES_PASSWORD=gold_admin \
-            -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" postgres:17-alpine
+            -v "$PWD/deploy/postgres:/docker-entrypoint-initdb.d:ro" pgvector/pgvector:pg17
           for i in $(seq 1 60); do
             [ "$(docker logs gold-test-pg 2>&1 | grep -c 'ready to accept')" -ge 2 ] && break
             sleep 1

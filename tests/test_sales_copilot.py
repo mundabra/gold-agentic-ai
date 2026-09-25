@@ -131,3 +131,33 @@ def test_approvals_are_audited(sales_stack):
     proposed = [r for r in records if r.get("event") == "question" and r["actions_proposed"]]
     assert proposed and proposed[0]["app"] == "sales-copilot"
     assert "Account agent: log_activity" in proposed[0]["tools"]
+
+
+def test_playbook_questions_are_answered_from_documents_with_citations(sales_stack):
+    body = ask("How much discount can I give without approval?")
+    [step] = body["calls"][0]["steps"]
+    assert step["tool"] == "search_knowledge" and step["input"]["collection"] == "sales-playbook"
+    top = step["output"]["results"][0]
+    assert top["source"] == "pricing-and-discounts.md"
+    assert top["cite"] in body["answer"] and "10%" in body["answer"]
+
+
+def test_restricted_documents_reach_only_their_audience(sales_stack):
+    """Called as each user would be: sales leadership sees the internal matrix, a rep does not."""
+    import asyncio
+
+    from agents.mcp import MCPServerStreamableHttp
+
+    from gold import identity
+
+    async def search(groups: tuple[str, ...]) -> list[str]:
+        token = identity.sign(identity.User("someone@example.com", groups))
+        server = MCPServerStreamableHttp(params={"url": f"http://127.0.0.1:{stack.PORTS['mcp-knowledge']}/mcp",
+                                                 "headers": {identity.HEADER: token}}, name="knowledge")
+        async with server:
+            result = await server.call_tool("search_knowledge", {
+                "collection": "sales-playbook", "query": "Who can approve 30% off? Floor price for Enterprise?", "k": 10})
+        return [r["source"] for r in json.loads(result.content[0].text)["results"]]
+
+    assert "discount-approval-matrix.md" in asyncio.run(search(("sales", "sales-leadership")))
+    assert "discount-approval-matrix.md" not in asyncio.run(search(("sales",)))

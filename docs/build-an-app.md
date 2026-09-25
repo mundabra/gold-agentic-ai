@@ -38,7 +38,7 @@ ui:
   examples: [Which of my accounts need attention?, Brief me on Luís Gonçalves]
 ```
 
-Optional keys: `cli` (a module with `register(subparsers, groups)` and `run(args)` that adds `gold` commands; the data app adds `gold eval` this way) and `hooks` (app functions the platform calls at set points, such as `check_correction` for feedback).
+Optional keys: `knowledge` (document collections your agents search with `search_knowledge`, loaded into pgvector on start-up; see [knowledge](knowledge.md)), `cli` (a module with `register(subparsers, groups)` and `run(args)` that adds `gold` commands; the data app adds `gold eval` this way) and `hooks` (app functions the platform calls at set points, such as `check_correction` for feedback).
 
 `gold apps` lists what the platform found. Apps live in the `apps` package, or in your own package: set `GOLD_APP_PACKAGES=your_company_apps` and keep your apps in your own repository. `GOLD_APPS` limits which apps are served.
 
@@ -154,6 +154,7 @@ Platform settings (model endpoint, identity, guardrails, tracing) apply to every
 - [ ] Tools read the user with `current_user(ctx)` and pass it to the database
 - [ ] Every tool that changes something goes through `approvals.gate()` and is idempotent on `action_id`
 - [ ] Database logins with the least rights each tool needs; row-level security for per-user data
+- [ ] Documents in a `knowledge:` collection, with `audience` on anything restricted, and an `eval.jsonl`
 - [ ] Agent Cards that say clearly what each agent is for
 - [ ] Components in Compose, Helm (`values.yaml`, secrets, NetworkPolicy) and `tests/stack.py`
 - [ ] An end-to-end test with scripted replies

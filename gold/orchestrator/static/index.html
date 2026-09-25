@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GOLD</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%20width%3D%2264%22%20height%3D%2264%22%20role%3D%22img%22%20aria-label%3D%22GOLD%22%3E%20%3Cdefs%3E%20%3ClinearGradient%20id%3D%22gold-bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23F2CB6B%22/%3E%20%3Cstop%20offset%3D%220.55%22%20stop-color%3D%22%23C8921E%22/%3E%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%238A5A0E%22/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2216%22%20fill%3D%22url%28%23gold-bg%29%22/%3E%20%3Cpath%20d%3D%22M43.9%2021.2%20A15.5%2015.5%200%201%200%2047.5%2032%20H40.5%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%20%3Ccircle%20cx%3D%2231.5%22%20cy%3D%2232%22%20r%3D%223.6%22%20fill%3D%22%23FFFFFF%22/%3E%20%3C/svg%3E">
 <style>
   :root {
     --ground: #F3F4F2;
@@ -44,8 +45,9 @@
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--surface);
   }
-  .brand { display: flex; align-items: baseline; gap: 10px; }
-  .brand b { font-size: 20px; letter-spacing: 0.14em; color: var(--gold); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark { flex: none; }
+  .brand b { font-size: 20px; font-weight: 800; letter-spacing: 0.16em; color: var(--ink); }
   .brand span { color: var(--muted); font-size: 13px; }
   .agents { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
   .who { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
@@ -129,6 +131,9 @@
   .action .outcome { font-size: 13px; }
   .action .outcome.ok { color: var(--ok); }
   .action .outcome.no { color: var(--bad); }
+  .sources { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .sources ol { margin: 4px 0 0; padding-left: 20px; }
+  .sources li span { color: var(--muted); }
   .totals { font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 10px; font-variant-numeric: tabular-nums; }
   .fail { color: var(--bad); font-size: 13px; }
   @media (prefers-reduced-motion: no-preference) { .thinking::after { content: " …"; animation: blink 1.2s infinite; } }
@@ -137,7 +142,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><b>GOLD</b><span id="tagline"></span></div>
+  <div class="brand"><svg class="mark" viewBox="0 0 64 64" width="26" height="26" aria-hidden="true"> <defs> <linearGradient id="mark-bg" x1="0" y1="0" x2="1" y2="1"> <stop offset="0" stop-color="#F2CB6B"/> <stop offset="0.55" stop-color="#C8921E"/> <stop offset="1" stop-color="#8A5A0E"/> </linearGradient> </defs> <rect width="64" height="64" rx="16" fill="url(#mark-bg)"/> <path d="M43.9 21.2 A15.5 15.5 0 1 0 47.5 32 H40.5" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/> <circle cx="31.5" cy="32" r="3.6" fill="#FFFFFF"/> </svg><b>GOLD</b><span id="tagline"></span></div>
   <nav class="apps" id="apps" aria-label="Apps"></nav>
   <div class="agents" id="agents" aria-live="polite"></div>
   <div class="who" id="who"></div>
@@ -327,7 +332,7 @@ async function ask(question) {
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || res.statusText);
     sessionId = body.session_id;
-    pending.innerHTML = chartFor(lastResult(body)) + md(body.answer) + `<div class="meta">${body.calls.length} agent calls · ${(body.elapsed_ms / 1000).toFixed(1)} s</div>`;
+    pending.innerHTML = chartFor(lastResult(body)) + md(body.answer) + sourcesFor(body) + `<div class="meta">${body.calls.length} agent calls · ${(body.elapsed_ms / 1000).toFixed(1)} s</div>`;
     (body.actions || []).forEach((a) => addAction(pending, a));
     if (feedbackOn && body.answer_id) addRating(pending, body, question);
     if (body.blocked) pending.classList.add("blocked");
@@ -339,6 +344,19 @@ async function ask(question) {
     $("send").disabled = false;
     $("q").focus();
   }
+}
+
+// Passages from search_knowledge that the answer drew on, as a numbered list of sources.
+function sourcesFor(body) {
+  const seen = new Map();
+  body.calls.flatMap((c) => c.steps).filter((s) => s.tool === "search_knowledge" && s.output && Array.isArray(s.output.results))
+    .forEach((s) => s.output.results.forEach((r) => {
+      // Models don't always keep the brackets, so match the "Title › Section" inside them.
+      if (body.answer.includes(r.cite.replace(/^\[|\]$/g, ""))) seen.set(r.cite, r);
+    }));
+  if (!seen.size) return "";
+  return `<div class="sources">Sources<ol>${[...seen.values()].map((r) =>
+    `<li>${esc(r.cite.replace(/^\[|\]$/g, ""))} <span>(${esc(r.source)})</span></li>`).join("")}</ol></div>`;
 }
 
 // An agent proposed an action. Nothing has happened yet: the person who asked decides.

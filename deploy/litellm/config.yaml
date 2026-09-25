@@ -1,5 +1,5 @@
 # LiteLLM Proxy: one OpenAI-compatible endpoint, two stable model aliases.
-# GOLD only ever asks for "gold-general" and "gold-sql". Changing which model
+# GOLD only ever asks for "gold-general", "gold-sql" and "gold-embed". Changing which model
 # serves them is an edit here, never a code change.
 #
 # Values come from environment variables (see .env.example). LiteLLM supports
@@ -20,6 +20,14 @@ model_list:
       model: os.environ/SQL_MODEL          # e.g. openai/gold-sql
       api_base: os.environ/SQL_API_BASE
       api_key: os.environ/SQL_API_KEY
+
+  # Embeddings for knowledge retrieval (gold/knowledge). Changing this model means
+  # re-embedding the documents: `gold knowledge reset && gold knowledge sync`.
+  - model_name: gold-embed
+    litellm_params:
+      model: os.environ/EMBED_MODEL        # e.g. openai/<embedding model id>
+      api_base: os.environ/EMBED_API_BASE
+      api_key: os.environ/EMBED_API_KEY
 
 router_settings:
   num_retries: 2
