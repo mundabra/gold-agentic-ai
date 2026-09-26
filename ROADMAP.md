@@ -23,24 +23,41 @@ Hardening must not turn GOLD into infrastructure soup. Each change has to pass t
 
 If an item can't meet this bar, it is re-scoped or goes to "Later", and the maintainer decides.
 
-## Now: v0.6 "Trust boundaries" (P0)
+## Now: v0.6 "Trust and adoption" (P0)
 
-In build order. The order puts what an adopting enterprise hits first (unsafe deployment settings, the security review) ahead of attacks that need an already-compromised internal service. The principal engineer re-checks this order before every run and may put something more urgent first (a red main branch, a real bug, a research finding), saying why on the issue.
+Two tracks, built in parallel. The principal engineer's **morning run takes the next Trust item** and its **afternoon run takes the next Adoption item**. Anything more urgent (a red main branch, a real bug, a promoted urgent research finding) goes first, with the reason stated on the issue.
+
+### Trust track
+
+The order puts what an adopting enterprise hits first (unsafe deployment settings, the security review, the supply chain) ahead of attacks that need an already-compromised internal service.
 
 | Order | Issue | What | Why this position |
 |---:|---|---|---|
 | ✅ | [#22](https://github.com/mundabra/gold-agentic-ai/issues/22) | CI gates: lint, dependency and secret scanning, image scan, Python 3.11, SBOM | Done (#41) |
 | 1 | [#24](https://github.com/mundabra/gold-agentic-ai/issues/24) | Sanitize errors before they reach models and callers | Small; removes a leak class |
-| 2 | [#20](https://github.com/mundabra/gold-agentic-ai/issues/20) | Production profile that fails closed, and `gold doctor` (first slice: today's settings) | The likeliest real failure is deploying demo settings; checks grow as #17 and #15 land |
-| 3 | [#23](https://github.com/mundabra/gold-agentic-ai/issues/23) | Threat model, SECURITY.md, "when not to use GOLD" (first slice: honest current state) | The first thing an enterprise security review reads; updated with each fix |
-| 4 | [#18](https://github.com/mundabra/gold-agentic-ai/issues/18) | App membership explicit by default | Small; closes the self-declared `app:` tag path |
-| 5 | [#17](https://github.com/mundabra/gold-agentic-ai/issues/17) | Registry: authentication, SSRF defence, name binding | Control-plane entry point, reachable by any pod |
-| 6 | [#15](https://github.com/mundabra/gold-agentic-ai/issues/15) | Separate signing keys for identity and approvals, with `iss`, `aud` and `kid` | Root of trust; #16 builds on it |
-| 7 | [#16](https://github.com/mundabra/gold-agentic-ai/issues/16) | Approved actions resolved from platform config, not the ticket's URL | Needs audience-bound tokens from #15 |
-| 8 | [#19](https://github.com/mundabra/gold-agentic-ai/issues/19) | Rejected approvals can't execute (state in Postgres) | Low exploitability today (same user); closes a documented limit |
-| ∞ | [#21](https://github.com/mundabra/gold-agentic-ai/issues/21) | Adversarial test suite mapped to the README's guarantees | Grows with every fix above; closed when the guarantees table is fully linked |
+| 2 | [#44](https://github.com/mundabra/gold-agentic-ai/issues/44) | Pin third-party CI actions to commit SHAs and default images to tested versions; Dependabot | Finishes the supply-chain work; protects every release (research, urgent) |
+| 3 | [#20](https://github.com/mundabra/gold-agentic-ai/issues/20) | Production profile that fails closed, and `gold doctor` (first slice: today's settings) | The likeliest real failure is deploying demo settings |
+| 4 | [#23](https://github.com/mundabra/gold-agentic-ai/issues/23) | Threat model, SECURITY.md, "when not to use GOLD" (first slice: honest current state) | The first thing a security review reads |
+| 5 | [#46](https://github.com/mundabra/gold-agentic-ai/issues/46) | Compliance control map (OWASP Agentic Top 10, NIST AI RMF, ISO/IEC 42001, EU AI Act) | Shares its evidence with #23; turns controls into reusable evidence |
+| 6 | [#18](https://github.com/mundabra/gold-agentic-ai/issues/18) | App membership explicit by default | Small; closes the self-declared `app:` tag path |
+| 7 | [#17](https://github.com/mundabra/gold-agentic-ai/issues/17) | Registry: authentication, SSRF defence, name binding, signed Agent Cards | Control-plane entry point, reachable by any pod |
+| 8 | [#15](https://github.com/mundabra/gold-agentic-ai/issues/15) | Separate signing keys for identity and approvals (`iss`, `aud`, `kid`) | Root of trust; #16 builds on it |
+| 9 | [#16](https://github.com/mundabra/gold-agentic-ai/issues/16) | Approved actions resolved from platform config, not the ticket's URL | Needs audience-bound tokens from #15 |
+| 10 | [#19](https://github.com/mundabra/gold-agentic-ai/issues/19) | Rejected approvals can't execute (state in Postgres) | Low exploitability today; closes a documented limit |
+| ∞ | [#21](https://github.com/mundabra/gold-agentic-ai/issues/21) | Adversarial test suite mapped to the README's guarantees | Grows with every fix; closed when the guarantees table is fully linked |
 
-**Done when** every "guaranteed" row in SECURITY.md links to a passing adversarial test.
+### Adoption track
+
+The bar: **easier to understand and adopt than any recipe collection**, because every step runs on one governed system. It's measured by time to first answer and time to a first app of your own.
+
+| Order | Issue | What | Why this position |
+|---:|---|---|---|
+| 1 | [#49](https://github.com/mundabra/gold-agentic-ai/issues/49) | `make demo`: one command to a running GOLD from published images, with a measured time to first answer | The first ten minutes decide adoption |
+| 2 | [#50](https://github.com/mundabra/gold-agentic-ai/issues/50) | A guided tour: GOLD in eight steps on one running system, each step tested | Understanding: one idea per step, no new code |
+| 3 | [#51](https://github.com/mundabra/gold-agentic-ai/issues/51) | `gold new app <name>`: scaffold an app that deploys from its own folder | Time to a first app of your own |
+| 4 | [#52](https://github.com/mundabra/gold-agentic-ai/issues/52) | A README a newcomer understands in two minutes (maintainer) | Written last, around the quickstart and tour |
+
+**Done when** every "guaranteed" row in SECURITY.md links to a passing adversarial test, and a newcomer gets from `git clone` to a governed answer with one command and to a first own app with one more.
 
 ## Next: v0.7 "Production posture" (P1)
 
