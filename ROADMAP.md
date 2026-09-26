@@ -59,6 +59,10 @@ Starts when v0.6 is released. Roughly in order:
 - [#35](https://github.com/mundabra/gold-agentic-ai/issues/35) Governance eval suite; nightly real-model evals (**needs the owner**: an API key and a budget)
 - [#36](https://github.com/mundabra/gold-agentic-ai/issues/36) Architecture decision records
 
+## Optional provider profiles (separate track)
+
+A provider profile makes GOLD quick to run on one specific cloud without touching the core. It maps GOLD's model roles (`gold-general`, `gold-sql`, `gold-embed`), database and Kubernetes settings to that provider's services, and it sits entirely in `deploy/providers/<provider>/` and `docs/providers/<provider>.md` (the AGENTS.md rule). The first profile is being built by a dedicated routine and tracked with its own label. This track never blocks the milestones above; its only core changes are a generic contract page and CI rendering of every profile.
+
 ## Later (worth doing, not now)
 
 These wait until v0.7 lands, or until a user needs them:
