@@ -25,20 +25,20 @@ If an item can't meet this bar, it is re-scoped or goes to "Later", and the main
 
 ## Now: v0.6 "Trust boundaries" (P0)
 
-In build order. Later items depend on earlier ones.
+In build order. The order puts what an adopting enterprise hits first (unsafe deployment settings, the security review) ahead of attacks that need an already-compromised internal service. The principal engineer re-checks this order before every run and may put something more urgent first (a red main branch, a real bug, a research finding), saying why on the issue.
 
-| Order | Issue | What | Why first |
+| Order | Issue | What | Why this position |
 |---:|---|---|---|
-| 1 | [#22](https://github.com/mundabra/gold-agentic-ai/issues/22) | CI gates: lint, dependency and secret scanning, image scan, Python 3.11, SBOM | Protects every change after it |
-| 2 | [#24](https://github.com/mundabra/gold-agentic-ai/issues/24) | Sanitize errors before they reach models and callers | Small; removes a leak class |
-| 3 | [#18](https://github.com/mundabra/gold-agentic-ai/issues/18) | App membership explicit by default | Small; closes the self-declared `app:` tag path |
-| 4 | [#17](https://github.com/mundabra/gold-agentic-ai/issues/17) | Registry: authentication, SSRF defence, name binding | Control-plane entry point |
-| 5 | [#15](https://github.com/mundabra/gold-agentic-ai/issues/15) | Separate signing keys for identity and approvals, with `iss`, `aud` and `kid` | Root of trust; #16 builds on it |
-| 6 | [#16](https://github.com/mundabra/gold-agentic-ai/issues/16) | Approved actions resolved from platform config, not the ticket's URL | Needs audience-bound tokens from #15 |
-| 7 | [#19](https://github.com/mundabra/gold-agentic-ai/issues/19) | Rejected approvals can't execute (state in Postgres) | Closes a documented limit |
-| 8 | [#20](https://github.com/mundabra/gold-agentic-ai/issues/20) | Production profile that fails closed, and `gold doctor` | Checks the controls above |
-| 9 | [#21](https://github.com/mundabra/gold-agentic-ai/issues/21) | Adversarial test suite mapped to the README's guarantees | Grows with each fix; finished last |
-| 10 | [#23](https://github.com/mundabra/gold-agentic-ai/issues/23) | Threat model, SECURITY.md, "when not to use GOLD" | Written last, so it describes what is true |
+| ✅ | [#22](https://github.com/mundabra/gold-agentic-ai/issues/22) | CI gates: lint, dependency and secret scanning, image scan, Python 3.11, SBOM | Done (#41) |
+| 1 | [#24](https://github.com/mundabra/gold-agentic-ai/issues/24) | Sanitize errors before they reach models and callers | Small; removes a leak class |
+| 2 | [#20](https://github.com/mundabra/gold-agentic-ai/issues/20) | Production profile that fails closed, and `gold doctor` (first slice: today's settings) | The likeliest real failure is deploying demo settings; checks grow as #17 and #15 land |
+| 3 | [#23](https://github.com/mundabra/gold-agentic-ai/issues/23) | Threat model, SECURITY.md, "when not to use GOLD" (first slice: honest current state) | The first thing an enterprise security review reads; updated with each fix |
+| 4 | [#18](https://github.com/mundabra/gold-agentic-ai/issues/18) | App membership explicit by default | Small; closes the self-declared `app:` tag path |
+| 5 | [#17](https://github.com/mundabra/gold-agentic-ai/issues/17) | Registry: authentication, SSRF defence, name binding | Control-plane entry point, reachable by any pod |
+| 6 | [#15](https://github.com/mundabra/gold-agentic-ai/issues/15) | Separate signing keys for identity and approvals, with `iss`, `aud` and `kid` | Root of trust; #16 builds on it |
+| 7 | [#16](https://github.com/mundabra/gold-agentic-ai/issues/16) | Approved actions resolved from platform config, not the ticket's URL | Needs audience-bound tokens from #15 |
+| 8 | [#19](https://github.com/mundabra/gold-agentic-ai/issues/19) | Rejected approvals can't execute (state in Postgres) | Low exploitability today (same user); closes a documented limit |
+| ∞ | [#21](https://github.com/mundabra/gold-agentic-ai/issues/21) | Adversarial test suite mapped to the README's guarantees | Grows with every fix above; closed when the guarantees table is fully linked |
 
 **Done when** every "guaranteed" row in SECURITY.md links to a passing adversarial test.
 
