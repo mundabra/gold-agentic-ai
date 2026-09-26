@@ -54,7 +54,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 
 0. **The platform stays app-agnostic.** Nothing in `gold/` may import from `apps/` or know an app's name. If an app needs something, add a manifest key or a hook.
 
-1. **Stay vendor-neutral.** Never name a cloud or inference provider in code, docs or examples. Open-source projects (vLLM, LiteLLM, SQLGlot, NVIDIA AIPerf) and model names are fine.
+1. **Stay vendor-neutral in the core.** Never name a cloud or inference provider in code, docs or examples, with one exception: **optional provider profiles** live only in `deploy/providers/<provider>/` and `docs/providers/<provider>.md`, and may name their provider there. Nothing outside those paths may name or depend on a provider, and deleting a provider's folder and page must leave GOLD fully working. Open-source projects (vLLM, LiteLLM, SQLGlot, NVIDIA AIPerf) and model names are fine everywhere.
 2. **Never weaken governance to make something work.** That covers the SQLGlot check, the function denylist, single-statement execution, the dry-run cost limit, column grants, row-level security, the signed user context, approvals, text scrubbing, the input guardrail and the registry token. If a test fails because of one of them, fix the caller.
 3. **No secrets in the repo.** No API keys, tokens or passwords other than the documented local defaults (`gold_reader`, `gold_admin`, `gold_crm_writer`, `sk-gold-local` and the like).
 4. **The SQL prompt contract is load-bearing.** Changing `apps/data_analyst/sql_model.py` changes what a fine-tuned model sees. Say so in the pull request and re-run `gold eval`.
@@ -69,6 +69,7 @@ docker compose --profile scripted up --build             # the whole stack, no A
 - **Add an agent to an app:** copy `apps/data_analyst/examples/trends_agent.py`. List it in the app's `app.yaml`, or tag a skill `app:<name>`.
 - **Add a tool:** add a function to an `MCPServer` in the app's `tools/`. Reading tools get `READ_ONLY`; tools that change anything get `WRITES` and must call `approvals.gate()` and be idempotent on `action_id`.
 - **Add documents:** put Markdown in an app's `knowledge:` folder (with `audience:` front matter if restricted) and add questions to its `eval.jsonl`; run `gold knowledge eval`.
+- **Add a provider profile:** a Helm values overlay in `deploy/providers/<provider>/` and a page in `docs/providers/<provider>.md` that maps GOLD's model roles, database and deployment to that provider. No code changes; the core must not learn about it.
 - **Change the glossary:** edit `deploy/postgres/02-glossary.sql`, copy it to the Helm folder, then run `gold eval` to see the effect.
 - **Change the UI:** `gold/orchestrator/static/index.html` is dependency-free on purpose (it must work offline) and app-agnostic (everything app-specific comes from `/api/apps`). Keep it that way.
 - **Release:** bump the version in `pyproject.toml`, `gold/__init__.py`, `deploy/helm/gold/Chart.yaml` (`version` and `appVersion`) and the image tags in `values.yaml`. Then push a `vX.Y.Z` tag; `.github/workflows/release.yml` publishes the images.
